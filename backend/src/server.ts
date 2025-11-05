@@ -61,7 +61,7 @@ wss.on('connection', (ws: WebSocket) => {
   });
 });
 
-function handleMessage(ws: WebSocket, message: Message): void {
+export function handleMessage(ws: WebSocket, message: Message): void {
   switch (message.type) {
     case 'CREATE_ROOM':
       handleCreateRoom(ws, message);
@@ -94,6 +94,7 @@ function handleCreateRoom(ws: WebSocket, message: CreateRoomMessage): void {
     type: 'ROOM_CREATED',
     roomId,
     userId,
+    isHost: true,
     timestamp: Date.now(),
   };
 
@@ -123,6 +124,7 @@ function handleJoinRoom(ws: WebSocket, message: JoinRoomMessage): void {
     type: 'ROOM_JOINED',
     roomId: message.roomId,
     userId,
+    isHost: participant?.isHost || false,
     timestamp: Date.now(),
   };
 
