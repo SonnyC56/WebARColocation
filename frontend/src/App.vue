@@ -14,21 +14,24 @@
       <AROverlay
         v-if="isInARMode"
         :anchor-found="anchorFound"
+        :debug-info="debugInfo"
         @place-object="handlePlaceObject"
         @exit-ar="handleExitAR"
+        @focus-camera="handleFocusCamera"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import SessionUI from './components/SessionUI.vue';
 import ARScene from './components/ARScene.vue';
 import AROverlay from './components/AROverlay.vue';
+import type { DebugInfo } from './components/AROverlay.vue';
 import { useSessionStore } from './stores/session';
 import { useImageTracking } from './composables/useImageTracking';
-import { Mesh, MeshBuilder, Vector3, Quaternion } from '@babylonjs/core';
+import { Mesh, MeshBuilder, Vector3, Quaternion, StandardMaterial, Color3 } from '@babylonjs/core';
 import type { Scene, Engine } from '@babylonjs/core';
 
 const store = useSessionStore();
@@ -38,8 +41,21 @@ const anchorFound = ref(false);
 const scene = ref<Scene | null>(null);
 const engine = ref<Engine | null>(null);
 const placedObjects = ref<Map<string, Mesh>>(new Map());
+const lastError = ref<string | null>(null);
+const trackingInitialized = ref(false);
 
 let imageTracking: ReturnType<typeof useImageTracking> | null = null;
+
+// Debug info computed property
+const debugInfo = computed<DebugInfo>(() => ({
+  webxrSupported: arSceneRef.value?.isSupported || false,
+  arActive: isInARMode.value && (arSceneRef.value?.isInAR || false),
+  trackingInitialized: trackingInitialized.value,
+  networkConnected: store.networkSync.connected,
+  roomId: store.roomId,
+  objectCount: placedObjects.value.size,
+  lastError: lastError.value,
+}));
 
 const handleStartAR = async () => {
   if (!arSceneRef.value) return;
@@ -64,9 +80,17 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
     
     // Initialize QR tracking
     imageTracking.initializeImageTracking('/qr-marker.png', 0.2).then((success) => {
+      trackingInitialized.value = success;
       if (success) {
         console.log('Image tracking initialized');
+        lastError.value = null;
+      } else {
+        lastError.value = 'Failed to initialize image tracking';
       }
+    }).catch((err: any) => {
+      trackingInitialized.value = false;
+      lastError.value = `Image tracking error: ${err.message}`;
+      console.error('Image tracking initialization error:', err);
     });
     
     // Watch for anchor tracking state
@@ -92,6 +116,28 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
 
 const handleAREntered = () => {
   console.log('AR entered');
+  lastError.value = null;
+  
+  // Add a test cube to verify 3D rendering works
+  if (scene.value) {
+    setTimeout(() => {
+      if (scene.value) {
+        try {
+          const testCube = MeshBuilder.CreateBox('test-cube', { size: 0.2 }, scene.value as any);
+          testCube.position = new Vector3(0, 0.5, -1); // 1 meter in front, 0.5m up
+          
+          const material = new StandardMaterial('test-mat', scene.value as any);
+          material.diffuseColor = new Color3(1, 0, 0); // Red
+          testCube.material = material;
+          
+          console.log('Test cube created at position:', testCube.position);
+        } catch (err: any) {
+          console.error('Failed to create test cube:', err);
+          lastError.value = `Test cube error: ${err.message}`;
+        }
+      }
+    }, 1000);
+  }
 };
 
 const handleARExited = () => {
@@ -132,6 +178,73 @@ const handleExitAR = async () => {
     await arSceneRef.value.exitAR();
   }
   isInARMode.value = false;
+};
+
+const handleFocusCamera = async () => {
+  // Try to trigger camera autofocus
+  try {
+    // Method 1: Try to access WebXR session directly
+    if (arSceneRef.value?.xrExperience?.baseExperience) {
+      const baseExperience = arSceneRef.value.xrExperience.baseExperience;
+      const session = (baseExperience as any).sessionManager?.currentSession || (baseExperience as any).session;
+      
+      if (session) {
+        // Try to trigger focus by requesting reference space
+        try {
+          await session.requestReferenceSpace('viewer');
+        } catch (e) {
+          // Ignore errors
+        }
+        
+        // Try to access camera track through WebXR
+        if ((session as any).inputSources) {
+          const inputSources = (session as any).inputSources as any[];
+          for (const inputSource of inputSources) {
+            if (inputSource && inputSource.track) {
+              const track = inputSource.track as MediaStreamTrack;
+              if (track.kind === 'video' && 'applyConstraints' in track) {
+                try {
+                  await (track as any).applyConstraints({
+                    advanced: [{ focusMode: 'continuous' }]
+                  } as any);
+                  console.log('Camera focus triggered via inputSource track');
+                  lastError.value = null;
+                  return;
+                } catch (e) {
+                  // Continue to fallback
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Method 2: Fallback - request camera access temporarily to trigger focus
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment'
+          } 
+        });
+        // Stop immediately - we just wanted to trigger focus
+        stream.getTracks().forEach(track => {
+          track.stop();
+        });
+        console.log('Camera focus triggered via getUserMedia');
+        lastError.value = null;
+      } catch (err: any) {
+        console.warn('Could not trigger camera focus:', err);
+        lastError.value = `Focus failed: ${err.message}`;
+      }
+    } else {
+      lastError.value = 'getUserMedia not available';
+    }
+  } catch (error: any) {
+    console.error('Error focusing camera:', error);
+    lastError.value = `Focus error: ${error.message}`;
+  }
 };
 
 const setupNetworkHandlers = () => {

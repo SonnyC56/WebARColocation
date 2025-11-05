@@ -1,5 +1,59 @@
 <template>
   <div class="ar-overlay">
+    <!-- Debug Panel (Top Left) -->
+    <div class="debug-panel">
+      <div class="debug-header">
+        <span>DEBUG</span>
+        <button @click="showDebug = !showDebug" class="debug-toggle">
+          {{ showDebug ? '▼' : '▲' }}
+        </button>
+      </div>
+      <div v-if="showDebug" class="debug-content">
+        <div class="debug-line">
+          <span class="debug-label">WebXR:</span>
+          <span :class="['debug-value', props.debugInfo.webxrSupported ? 'ok' : 'error']">
+            {{ props.debugInfo.webxrSupported ? 'Supported' : 'Not Supported' }}
+          </span>
+        </div>
+        <div class="debug-line">
+          <span class="debug-label">AR Session:</span>
+          <span :class="['debug-value', props.debugInfo.arActive ? 'ok' : 'warning']">
+            {{ props.debugInfo.arActive ? 'Active' : 'Inactive' }}
+          </span>
+        </div>
+        <div class="debug-line">
+          <span class="debug-label">Image Tracking:</span>
+          <span :class="['debug-value', props.debugInfo.trackingInitialized ? 'ok' : 'warning']">
+            {{ props.debugInfo.trackingInitialized ? 'Init' : 'Not Init' }}
+          </span>
+        </div>
+        <div class="debug-line">
+          <span class="debug-label">QR Anchor:</span>
+          <span :class="['debug-value', props.anchorFound ? 'ok' : 'warning']">
+            {{ props.anchorFound ? 'Found' : 'Not Found' }}
+          </span>
+        </div>
+        <div class="debug-line">
+          <span class="debug-label">Network:</span>
+          <span :class="['debug-value', props.debugInfo.networkConnected ? 'ok' : 'error']">
+            {{ props.debugInfo.networkConnected ? 'Connected' : 'Disconnected' }}
+          </span>
+        </div>
+        <div class="debug-line">
+          <span class="debug-label">Room:</span>
+          <span class="debug-value">{{ props.debugInfo.roomId || 'None' }}</span>
+        </div>
+        <div class="debug-line">
+          <span class="debug-label">Scene Objects:</span>
+          <span class="debug-value">{{ props.debugInfo.objectCount }}</span>
+        </div>
+        <div v-if="props.debugInfo.lastError" class="debug-line error-line">
+          <span class="debug-label">Error:</span>
+          <span class="debug-value error">{{ props.debugInfo.lastError }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Status bar -->
     <div class="status-bar">
       <div class="status-item">
@@ -21,11 +75,17 @@
       <div class="instruction-card">
         <h3>Scan QR Code</h3>
         <p>Point your device at the QR marker to anchor the AR experience</p>
+        <button @click="handleFocusCamera" class="btn-focus">
+          Focus Camera
+        </button>
       </div>
     </div>
 
     <!-- Bottom controls -->
     <div class="controls">
+      <button @click="handleFocusCamera" class="btn-control btn-focus">
+        Focus Camera
+      </button>
       <button @click="handlePlaceObject" class="btn-control" :disabled="!props.anchorFound">
         Place Object
       </button>
@@ -37,17 +97,31 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useSessionStore } from '../stores/session';
 
 const store = useSessionStore();
+const showDebug = ref(true);
+
+export interface DebugInfo {
+  webxrSupported: boolean;
+  arActive: boolean;
+  trackingInitialized: boolean;
+  networkConnected: boolean;
+  roomId: string | null;
+  objectCount: number;
+  lastError: string | null;
+}
 
 const props = defineProps<{
   anchorFound: boolean;
+  debugInfo: DebugInfo;
 }>();
 
 const emit = defineEmits<{
   'place-object': [];
   'exit-ar': [];
+  'focus-camera': [];
 }>();
 
 const handlePlaceObject = () => {
@@ -56,6 +130,10 @@ const handlePlaceObject = () => {
 
 const handleExitAR = () => {
   emit('exit-ar');
+};
+
+const handleFocusCamera = () => {
+  emit('focus-camera');
 };
 </script>
 
@@ -181,5 +259,106 @@ const handleExitAR = () => {
 
 .btn-exit:hover:not(:disabled) {
   background: rgba(239, 68, 68, 1);
+}
+
+.debug-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  padding: 8px;
+  z-index: 2000;
+  pointer-events: auto;
+  max-width: 280px;
+  max-height: 70vh;
+  overflow-y: auto;
+  border-radius: 0 0 8px 0;
+  border-right: 2px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.debug-toggle {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.debug-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.debug-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.debug-label {
+  opacity: 0.8;
+  min-width: 100px;
+}
+
+.debug-value {
+  font-weight: 600;
+  text-align: right;
+}
+
+.debug-value.ok {
+  color: #4ade80;
+}
+
+.debug-value.warning {
+  color: #fbbf24;
+}
+
+.debug-value.error {
+  color: #f87171;
+}
+
+.error-line {
+  background: rgba(248, 113, 113, 0.1);
+  padding: 4px;
+  border-radius: 4px;
+  border-left: 2px solid #f87171;
+}
+
+.btn-focus {
+  background: rgba(34, 197, 94, 0.9);
+}
+
+.btn-focus:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 1);
+}
+
+@media (max-width: 480px) {
+  .debug-panel {
+    font-size: 0.65rem;
+    max-width: 240px;
+    padding: 6px;
+  }
+  
+  .debug-label {
+    min-width: 80px;
+  }
 }
 </style>
