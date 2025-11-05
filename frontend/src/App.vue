@@ -3,8 +3,8 @@
     <!-- Session UI (shown when not in AR) -->
     <SessionUI v-if="!isInARMode" @start-ar="handleStartAR" />
     
-    <!-- AR Scene (shown when in AR mode) -->
-    <div v-else class="ar-container">
+    <!-- AR Scene (always mounted, shown when in AR mode) -->
+    <div :class="{ 'ar-container': isInARMode, 'ar-hidden': !isInARMode }">
       <ARScene
         ref="arSceneRef"
         @engine-ready="handleEngineReady"
@@ -12,6 +12,7 @@
         @ar-exited="handleARExited"
       />
       <AROverlay
+        v-if="isInARMode"
         :anchor-found="anchorFound"
         @place-object="handlePlaceObject"
         @exit-ar="handleExitAR"
@@ -231,5 +232,15 @@ if (debugMode) {
   width: 100%;
   height: 100%;
   position: relative;
+}
+
+.ar-hidden {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  pointer-events: none;
 }
 </style>

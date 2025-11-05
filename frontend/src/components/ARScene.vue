@@ -59,6 +59,7 @@ defineExpose({
   engine,
   scene,
   xrExperience,
+  checkSupport,
 });
 </script>
 
