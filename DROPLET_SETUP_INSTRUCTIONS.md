@@ -139,25 +139,133 @@ sudo certbot --nginx -d yourdomain.com
 curl https://yourdomain.com/health
 ```
 
-### Phase 7: Verification
+### Phase 7: Verification & Self-Testing
 
-**16. Run these checks:**
+**16. Run comprehensive self-tests:**
+
+You MUST run all these tests and report the results:
 
 ```bash
-# Check PM2 status
+echo "=== TEST 1: Node.js Installation ==="
+node --version
+npm --version
+echo ""
+
+echo "=== TEST 2: PM2 Status ==="
 pm2 status
+pm2 list
+echo ""
 
-# Check application logs
-pm2 logs ar-backend --lines 50
+echo "=== TEST 3: Application Health Endpoint ==="
+HEALTH_RESPONSE=$(curl -s http://localhost:8080/health)
+echo "Response: $HEALTH_RESPONSE"
+if echo "$HEALTH_RESPONSE" | grep -q "status.*ok"; then
+    echo "✅ Health endpoint working"
+else
+    echo "❌ Health endpoint failed"
+fi
+echo ""
 
-# Check Nginx status
-sudo systemctl status nginx
+echo "=== TEST 4: Port 8080 Listening ==="
+if sudo netstat -tlnp | grep -q ":8080"; then
+    echo "✅ Port 8080 is listening"
+    sudo netstat -tlnp | grep ":8080"
+else
+    echo "❌ Port 8080 not listening"
+fi
+echo ""
 
-# Check if port 8080 is listening
-sudo netstat -tlnp | grep 8080
+echo "=== TEST 5: Nginx Status ==="
+sudo systemctl status nginx --no-pager -l | head -10
+if sudo systemctl is-active --quiet nginx; then
+    echo "✅ Nginx is running"
+else
+    echo "❌ Nginx is not running"
+fi
+echo ""
 
-# Test health endpoint
-curl http://localhost:8080/health
+echo "=== TEST 6: Nginx Configuration ==="
+if sudo nginx -t 2>&1 | grep -q "successful"; then
+    echo "✅ Nginx configuration valid"
+else
+    echo "❌ Nginx configuration invalid"
+    sudo nginx -t
+fi
+echo ""
+
+echo "=== TEST 7: Application Logs (Last 20 lines) ==="
+pm2 logs ar-backend --lines 20 --nostream
+echo ""
+
+echo "=== TEST 8: WebSocket Test (via curl) ==="
+WS_TEST=$(curl -s -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: test" http://localhost:8080/ 2>&1 | head -5)
+echo "$WS_TEST"
+if echo "$WS_TEST" | grep -qi "upgrade\|websocket\|101"; then
+    echo "✅ WebSocket headers detected"
+else
+    echo "⚠️  WebSocket upgrade headers may not be working (this is OK if testing via HTTP)"
+fi
+echo ""
+
+echo "=== TEST 9: Firewall Status ==="
+sudo ufw status
+echo ""
+
+echo "=== TEST 10: Process Check ==="
+if pgrep -f "dist/server.js" > /dev/null; then
+    echo "✅ Backend process is running"
+    ps aux | grep "dist/server.js" | grep -v grep
+else
+    echo "❌ Backend process not found"
+fi
+echo ""
+
+echo "=== TEST 11: External Access Test ==="
+EXTERNAL_IP=$(curl -s ifconfig.me || curl -s ipinfo.io/ip)
+echo "Droplet IP: $EXTERNAL_IP"
+echo "Testing external access..."
+EXTERNAL_HEALTH=$(curl -s --max-time 5 http://$EXTERNAL_IP/health 2>&1)
+if echo "$EXTERNAL_HEALTH" | grep -q "status.*ok"; then
+    echo "✅ External access working"
+    echo "Health response: $EXTERNAL_HEALTH"
+else
+    echo "⚠️  External access may need Nginx configuration or firewall adjustment"
+    echo "Response: $EXTERNAL_HEALTH"
+fi
+echo ""
+```
+
+**17. Generate Test Report:**
+
+After running all tests, create a summary report:
+
+```bash
+cat > /tmp/setup-report.txt << 'EOF'
+=== SETUP TEST REPORT ===
+Date: $(date)
+
+TEST RESULTS:
+- Node.js: [✅/❌]
+- PM2: [✅/❌]
+- Health Endpoint: [✅/❌]
+- Port 8080: [✅/❌]
+- Nginx: [✅/❌]
+- Nginx Config: [✅/❌]
+- Application Logs: [✅/❌]
+- WebSocket Headers: [✅/❌]
+- Firewall: [✅/❌]
+- Process: [✅/❌]
+- External Access: [✅/❌]
+
+DROPLET IP: [IP_ADDRESS]
+HEALTH ENDPOINT: http://[IP_ADDRESS]/health
+WEBSOCKET URL: ws://[IP_ADDRESS] (or wss://[DOMAIN] if SSL configured)
+
+NOTES:
+[Any errors or warnings]
+EOF
+
+cat /tmp/setup-report.txt
 ```
 
 ## Expected Results
@@ -219,14 +327,67 @@ sudo ufw allow 8080/tcp  # If needed
 - [ ] Health endpoint responding
 - [ ] SSL certificate installed (if using domain)
 
-## Report Back
+## Self-Testing Requirements
 
-After completing setup, report:
-1. Application URL (IP or domain)
-2. Health endpoint status
-3. PM2 status
-4. Any errors encountered
+**IMPORTANT:** After completing all setup phases, you MUST:
+
+1. **Run all tests from Phase 7, Step 16** (the comprehensive test suite)
+2. **Execute each test command** and verify results
+3. **Generate the test report** from Step 17
+4. **Report findings** using this format:
+
+```
+=== SETUP COMPLETE ===
+
+✅ PASSED TESTS:
+- [List all tests that passed]
+
+❌ FAILED TESTS:
+- [List any tests that failed]
+- [Include error messages]
+
+⚠️  WARNINGS:
+- [List any warnings or concerns]
+
+DROPLET INFORMATION:
+- IP Address: [IP]
+- Health Endpoint: http://[IP]/health
+- WebSocket URL: ws://[IP] (or wss://[DOMAIN])
+- Status: [Ready/Needs Attention]
+
+NEXT STEPS REQUIRED:
+- [List any manual steps needed, e.g., "Run PM2 startup command", "Configure SSL"]
+```
+
+## Report Back Format
+
+After completing setup AND running all tests, provide this report:
+
+```
+=== BACKEND SETUP REPORT ===
+
+PHASE COMPLETION:
+✅ Phase 1: System Preparation
+✅ Phase 2: Application Setup  
+✅ Phase 3: Process Management
+✅ Phase 4: Network Configuration
+✅ Phase 5: Nginx Configuration
+[✅/❌] Phase 6: SSL Setup (if applicable)
+✅ Phase 7: Verification & Testing
+
+TEST RESULTS:
+[Copy output from test suite]
+
+FINAL STATUS:
+- Application URL: http://[IP]/health
+- WebSocket URL: ws://[IP] (or wss://[DOMAIN])
+- Status: [READY/NOT READY]
+- Issues: [None/List issues]
+
+MANUAL STEPS REQUIRED:
+- [List any steps the user needs to complete]
+```
 
 ---
 
-**Ready to begin? Start with Phase 1, Step 1.**
+**Ready to begin? Start with Phase 1, Step 1. After completing all phases, run Phase 7 tests and generate the report.**
