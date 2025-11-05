@@ -11,15 +11,17 @@
         @ar-entered="handleAREntered"
         @ar-exited="handleARExited"
       />
-      <AROverlay
-        v-if="isInARMode"
-        :anchor-found="anchorFound"
-        :debug-info="debugInfo"
-        @place-object="handlePlaceObject"
-        @exit-ar="handleExitAR"
-        @focus-camera="handleFocusCamera"
-      />
     </div>
+    
+    <!-- AR Overlay (separate from AR container to ensure proper z-index) -->
+    <AROverlay
+      v-if="isInARMode"
+      :anchor-found="anchorFound"
+      :debug-info="debugInfo"
+      @place-object="handlePlaceObject"
+      @exit-ar="handleExitAR"
+      @focus-camera="handleFocusCamera"
+    />
   </div>
 </template>
 
@@ -345,6 +347,7 @@ if (debugMode) {
   width: 100%;
   height: 100%;
   position: relative;
+  z-index: 1; /* Lower than overlay */
 }
 
 .ar-hidden {

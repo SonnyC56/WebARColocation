@@ -145,7 +145,9 @@ const handleFocusCamera = () => {
   right: 0;
   bottom: 0;
   pointer-events: none;
-  z-index: 1000;
+  z-index: 2147483647; /* Maximum z-index value */
+  isolation: isolate; /* Create new stacking context */
+  transform: translateZ(0); /* Force hardware acceleration */
 }
 
 .status-bar {
@@ -153,13 +155,15 @@ const handleFocusCamera = () => {
   top: 0;
   left: 0;
   right: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.85);
   color: white;
   padding: 12px 20px;
   display: flex;
   justify-content: space-around;
   gap: 20px;
   pointer-events: auto;
+  z-index: 2147483647;
+  transform: translateZ(0); /* Force hardware acceleration */
 }
 
 .status-item {
@@ -193,8 +197,9 @@ const handleFocusCamera = () => {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) translateZ(0);
   pointer-events: auto;
+  z-index: 2147483647;
 }
 
 .instruction-card {
@@ -222,12 +227,14 @@ const handleFocusCamera = () => {
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.85);
   padding: 20px;
   display: flex;
   justify-content: center;
   gap: 16px;
   pointer-events: auto;
+  z-index: 2147483647;
+  transform: translateZ(0); /* Force hardware acceleration */
 }
 
 .btn-control {
@@ -265,12 +272,12 @@ const handleFocusCamera = () => {
   position: absolute;
   top: 0;
   left: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.9);
   color: white;
   font-family: 'Courier New', monospace;
   font-size: 0.75rem;
   padding: 8px;
-  z-index: 2000;
+  z-index: 2147483647;
   pointer-events: auto;
   max-width: 280px;
   max-height: 70vh;
@@ -278,6 +285,7 @@ const handleFocusCamera = () => {
   border-radius: 0 0 8px 0;
   border-right: 2px solid rgba(255, 255, 255, 0.3);
   border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  transform: translateZ(0); /* Force hardware acceleration */
 }
 
 .debug-header {

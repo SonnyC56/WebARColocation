@@ -69,6 +69,7 @@ defineExpose({
   height: 100%;
   position: relative;
   overflow: hidden;
+  z-index: 1; /* Lower than overlay */
 }
 
 .ar-canvas {
@@ -76,5 +77,7 @@ defineExpose({
   height: 100%;
   display: block;
   touch-action: none;
+  position: relative;
+  z-index: 1;
 }
 </style>
