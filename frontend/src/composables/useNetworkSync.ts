@@ -52,15 +52,15 @@ export function useNetworkSync() {
       return envUrl;
     }
     
-    // Auto-detect based on current page protocol
+    // Default to droplet IP for development/testing
+    // Will auto-convert ws:// to wss:// if page is HTTPS
     if (typeof window !== 'undefined') {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const hostname = window.location.hostname === 'localhost' ? 'localhost:8080' : 'your-backend-url';
-      return `${protocol}//${hostname}`;
+      return `${protocol}//138.197.104.25`;
     }
     
     // Fallback (shouldn't happen in browser)
-    return 'ws://localhost:8080';
+    return 'ws://138.197.104.25';
   })();
 
   // Throttle for player pose updates (10-15 Hz)
