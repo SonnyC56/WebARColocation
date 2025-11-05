@@ -30,7 +30,38 @@ export function useNetworkSync() {
   const userId = ref<string | null>(null);
   const isHost = ref(false);
 
-  const serverUrl = import.meta.env.VITE_SERVER_URL || 'ws://localhost:8080';
+  const serverUrl = (() => {
+    const envUrl = import.meta.env.VITE_SERVER_URL;
+    
+    // If environment variable is set, use it and ensure protocol matches page protocol
+    if (envUrl) {
+      // If page is HTTPS and URL is ws://, convert to wss://
+      if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+        if (envUrl.startsWith('ws://')) {
+          console.warn('Converting ws:// to wss:// for HTTPS page');
+          return envUrl.replace('ws://', 'wss://');
+        }
+      }
+      // If page is HTTP and URL is wss://, convert to ws:// (for local dev)
+      if (typeof window !== 'undefined' && window.location.protocol === 'http:') {
+        if (envUrl.startsWith('wss://') && window.location.hostname === 'localhost') {
+          console.warn('Converting wss:// to ws:// for local HTTP development');
+          return envUrl.replace('wss://', 'ws://');
+        }
+      }
+      return envUrl;
+    }
+    
+    // Auto-detect based on current page protocol
+    if (typeof window !== 'undefined') {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const hostname = window.location.hostname === 'localhost' ? 'localhost:8080' : 'your-backend-url';
+      return `${protocol}//${hostname}`;
+    }
+    
+    // Fallback (shouldn't happen in browser)
+    return 'ws://localhost:8080';
+  })();
 
   // Throttle for player pose updates (10-15 Hz)
   let lastPoseUpdate = 0;

@@ -29,8 +29,12 @@ Add the following environment variable:
 - **Value**: Your backend WebSocket URL
   - For local testing: `ws://localhost:8080`
   - For production: `wss://api.yourdomain.com` (or your DigitalOcean app URL)
+  - **CRITICAL**: Must use `wss://` (secure WebSocket) for HTTPS sites, not `ws://`
 
-**Important**: Environment variables prefixed with `VITE_` are exposed to the client-side code.
+**Important**: 
+- Environment variables prefixed with `VITE_` are exposed to the client-side code
+- **The code will automatically convert `ws://` to `wss://` if the page is HTTPS**, but it's best to set the correct URL
+- If you get "insecure WebSocket" error, ensure `VITE_SERVER_URL` uses `wss://` not `ws://`
 
 ## Step 4: Deploy
 
