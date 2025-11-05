@@ -12,16 +12,6 @@
         @ar-exited="handleARExited"
       />
     </div>
-    
-    <!-- AR Overlay (separate from AR container to ensure proper z-index) -->
-    <AROverlay
-      v-if="isInARMode"
-      :anchor-found="anchorFound"
-      :debug-info="debugInfo"
-      @place-object="handlePlaceObject"
-      @exit-ar="handleExitAR"
-      @focus-camera="handleFocusCamera"
-    />
   </div>
 </template>
 
@@ -29,10 +19,10 @@
 import { ref, watch, computed } from 'vue';
 import SessionUI from './components/SessionUI.vue';
 import ARScene from './components/ARScene.vue';
-import AROverlay from './components/AROverlay.vue';
-import type { DebugInfo } from './components/AROverlay.vue';
 import { useSessionStore } from './stores/session';
 import { useImageTracking } from './composables/useImageTracking';
+import { useARUI } from './composables/useARUI';
+import type { DebugInfo } from './composables/useARUI';
 import { Mesh, MeshBuilder, Vector3, Quaternion, StandardMaterial, Color3 } from '@babylonjs/core';
 import type { Scene, Engine } from '@babylonjs/core';
 
@@ -47,6 +37,7 @@ const lastError = ref<string | null>(null);
 const trackingInitialized = ref(false);
 
 let imageTracking: ReturnType<typeof useImageTracking> | null = null;
+let arUI: ReturnType<typeof useARUI> | null = null;
 
 // Debug info computed property
 const debugInfo = computed<DebugInfo>(() => ({
@@ -72,6 +63,12 @@ const handleStartAR = async () => {
 const handleEngineReady = (eng: Engine, scn: Scene) => {
   engine.value = eng;
   scene.value = scn;
+  
+  // Initialize Babylon.js GUI for AR overlay
+  arUI = useARUI(scene as any);
+  if (arUI) {
+    arUI.initializeGUI();
+  }
   
   // Initialize image tracking
   if (scn && arSceneRef.value?.xrExperience) {
@@ -99,6 +96,18 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
     watch(() => imageTracking?.isTracking.value, (tracking) => {
       anchorFound.value = tracking || false;
       
+      // Update UI
+      if (arUI) {
+        arUI.updateControls(
+          handlePlaceObject,
+          handleExitAR,
+          handleFocusCamera,
+          anchorFound.value
+        );
+        arUI.updateStatusBar(store.roomId || 'None', store.participantCount, anchorFound.value);
+        arUI.showCenterInstruction(!anchorFound.value);
+      }
+      
       if (tracking && imageTracking?.anchorNode.value) {
         // Send anchor found event
         const position = imageTracking.anchorNode.value.position;
@@ -119,6 +128,19 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
 const handleAREntered = () => {
   console.log('AR entered');
   lastError.value = null;
+  
+  // Update UI
+  if (arUI) {
+    arUI.updateControls(
+      handlePlaceObject,
+      handleExitAR,
+      handleFocusCamera,
+      anchorFound.value
+    );
+    arUI.updateStatusBar(store.roomId || 'None', store.participantCount, anchorFound.value);
+    arUI.showCenterInstruction(!anchorFound.value);
+    arUI.updateDebugInfo(debugInfo.value);
+  }
   
   // Add a test cube to verify 3D rendering works
   if (scene.value) {
@@ -317,6 +339,26 @@ watch(anchorFound, (found) => {
   if (found && store.worldObjects.size > 0) {
     // Apply state sync now that anchor is found
     // This will be handled by the STATE_SYNC handler
+  }
+});
+
+// Watch debug info and update GUI
+watch(debugInfo, (info) => {
+  if (arUI) {
+    arUI.updateDebugInfo(info);
+  }
+}, { deep: true });
+
+// Watch store changes for UI updates
+watch(() => store.roomId, () => {
+  if (arUI) {
+    arUI.updateStatusBar(store.roomId || 'None', store.participantCount, anchorFound.value);
+  }
+});
+
+watch(() => store.participantCount, () => {
+  if (arUI) {
+    arUI.updateStatusBar(store.roomId || 'None', store.participantCount, anchorFound.value);
   }
 });
 
