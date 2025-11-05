@@ -237,7 +237,24 @@ echo ""
 
 **17. Generate Test Report:**
 
-After running all tests, create a summary report:
+**OPTION A: Run Automated Test Script (Recommended):**
+
+```bash
+# Download and run the automated test script
+wget https://raw.githubusercontent.com/SonnyC56/WebARColocation/master/test-backend.sh
+chmod +x test-backend.sh
+./test-backend.sh
+```
+
+This script will:
+- Run all 12 comprehensive tests automatically
+- Show pass/fail status for each test
+- Generate a detailed report file
+- Provide a summary with droplet IP and endpoints
+
+**OPTION B: Manual Test Report:**
+
+After running all tests manually, create a summary report:
 
 ```bash
 cat > /tmp/setup-report.txt << 'EOF'
