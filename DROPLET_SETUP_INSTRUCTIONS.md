@@ -166,19 +166,49 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### Phase 6: SSL Setup (If you have a domain)
+### Phase 6: SSL Setup (Required for Vercel HTTPS)
 
-**14. Get SSL certificate:**
+**14. Get SSL certificate (REQUIRED for Vercel testing):**
+
+You have two options:
+
+**OPTION A: Quick SSL Setup Script (Recommended)**
+
 ```bash
+# Download the quick SSL setup script
+wget https://raw.githubusercontent.com/SonnyC56/WebARColocation/master/quick-ssl-setup.sh
+chmod +x quick-ssl-setup.sh
+
+# Run with your domain name
+./quick-ssl-setup.sh yourdomain.com
+```
+
+**OPTION B: Manual SSL Setup**
+
+```bash
+# First, ensure DNS A record points to this droplet
+# Then update Nginx server_name
+sudo nano /etc/nginx/sites-available/default
+# Change: server_name _; to server_name yourdomain.com;
+
+# Test and reload Nginx
+sudo nginx -t
+sudo systemctl reload nginx
+
+# Get SSL certificate
 sudo certbot --nginx -d yourdomain.com
 # Follow the prompts
-# Certbot will automatically update Nginx config
 ```
 
 **15. Verify SSL:**
 ```bash
 curl https://yourdomain.com/health
+# Should return: {"status":"ok","timestamp":...}
 ```
+
+**16. Update Frontend (Vercel):**
+After SSL is working, update Vercel environment variable:
+- `VITE_SERVER_URL` = `wss://yourdomain.com`
 
 ### Phase 7: Verification & Self-Testing
 
