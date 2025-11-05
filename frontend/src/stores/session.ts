@@ -7,7 +7,7 @@ import type {
   StateSyncMessage,
   ParticipantJoinedMessage,
   ParticipantLeftMessage,
-} from '../../../backend/src/types';
+} from '../types';
 
 export const useSessionStore = defineStore('session', () => {
   const networkSync = useNetworkSync();

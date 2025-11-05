@@ -10,14 +10,14 @@
         <span class="status-label">Participants:</span>
         <span class="status-value">{{ store.participantCount }}</span>
       </div>
-      <div class="status-item" :class="{ 'status-ok': anchorFound, 'status-warning': !anchorFound }">
+      <div class="status-item" :class="{ 'status-ok': props.anchorFound, 'status-warning': !props.anchorFound }">
         <span class="status-label">Anchor:</span>
-        <span class="status-value">{{ anchorFound ? 'Found' : 'Not Found' }}</span>
+        <span class="status-value">{{ props.anchorFound ? 'Found' : 'Not Found' }}</span>
       </div>
     </div>
 
     <!-- Center instructions -->
-    <div v-if="!anchorFound" class="center-instruction">
+    <div v-if="!props.anchorFound" class="center-instruction">
       <div class="instruction-card">
         <h3>Scan QR Code</h3>
         <p>Point your device at the QR marker to anchor the AR experience</p>
@@ -26,7 +26,7 @@
 
     <!-- Bottom controls -->
     <div class="controls">
-      <button @click="handlePlaceObject" class="btn-control" :disabled="!anchorFound">
+      <button @click="handlePlaceObject" class="btn-control" :disabled="!props.anchorFound">
         Place Object
       </button>
       <button @click="handleExitAR" class="btn-control btn-exit">

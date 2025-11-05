@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, watch } from 'vue';
 import SessionUI from './components/SessionUI.vue';
 import ARScene from './components/ARScene.vue';
 import AROverlay from './components/AROverlay.vue';
@@ -57,8 +57,8 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
   // Initialize image tracking
   if (scn && arSceneRef.value?.xrExperience) {
     imageTracking = useImageTracking(
-      ref(scn),
-      ref(arSceneRef.value.xrExperience)
+      scene as any,
+      ref(arSceneRef.value.xrExperience) as any
     );
     
     // Initialize QR tracking
@@ -105,10 +105,10 @@ const handlePlaceObject = () => {
   const objectId = `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const offset = new Vector3(0, 0.1, 0.3); // 30cm forward, 10cm up
   
-  const mesh = MeshBuilder.CreateBox(objectId, { size: 0.1 }, scene.value);
+  const mesh = MeshBuilder.CreateBox(objectId, { size: 0.1 }, scene.value as any);
   
   if (imageTracking.anchorNode.value) {
-    mesh.parent = imageTracking.anchorNode.value;
+      mesh.parent = imageTracking.anchorNode.value as any;
     mesh.position = offset;
   }
   
@@ -141,14 +141,14 @@ const setupNetworkHandlers = () => {
     const objId = message.objectId;
     if (placedObjects.value.has(objId)) return; // Already created
     
-    const mesh = MeshBuilder.CreateBox(objId, { size: 0.1 }, scene.value);
+    const mesh = MeshBuilder.CreateBox(objId, { size: 0.1 }, scene.value as any);
     const worldPos = new Vector3(...message.position);
     const worldRot = new Quaternion(...message.rotation);
     
     // Convert to anchor-relative position
     const localPos = imageTracking.getLocalPosition(worldPos);
     
-    mesh.parent = imageTracking.anchorNode.value;
+      mesh.parent = imageTracking.anchorNode.value as any;
     mesh.position = localPos;
     mesh.rotationQuaternion = worldRot;
     
@@ -183,11 +183,11 @@ const setupNetworkHandlers = () => {
       const objId = obj.objectId;
       if (placedObjects.value.has(objId)) return;
       
-      const mesh = MeshBuilder.CreateBox(objId, { size: 0.1 }, scene.value!);
+      const mesh = MeshBuilder.CreateBox(objId, { size: 0.1 }, scene.value! as any);
       const worldPos = new Vector3(...obj.position);
       const localPos = imageTracking!.getLocalPosition(worldPos);
       
-      mesh.parent = imageTracking.anchorNode.value!;
+      mesh.parent = imageTracking!.anchorNode.value! as any;
       mesh.position = localPos;
       mesh.rotationQuaternion = new Quaternion(...obj.rotation);
       
@@ -200,9 +200,7 @@ const setupNetworkHandlers = () => {
 watch(anchorFound, (found) => {
   if (found && store.worldObjects.size > 0) {
     // Apply state sync now that anchor is found
-    store.worldObjects.forEach((obj) => {
-      // This will be handled by the STATE_SYNC handler
-    });
+    // This will be handled by the STATE_SYNC handler
   }
 });
 

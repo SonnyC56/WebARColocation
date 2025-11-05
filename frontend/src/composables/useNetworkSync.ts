@@ -1,5 +1,4 @@
-import { ref, onUnmounted, type Ref } from 'vue';
-import WebSocket from 'ws';
+import { ref, onUnmounted } from 'vue';
 import type {
   Message,
   JoinRoomMessage,
@@ -11,11 +10,7 @@ import type {
   RoomCreatedResponse,
   RoomJoinedResponse,
   ErrorMessage,
-  ParticipantJoinedMessage,
-  ParticipantLeftMessage,
-  HostChangedMessage,
-  StateSyncMessage,
-} from '../../backend/src/types';
+} from '../types';
 
 export interface NetworkSyncState {
   connected: boolean;
@@ -57,7 +52,7 @@ export function useNetworkSync() {
       try {
         // In browser, use native WebSocket
         const WebSocketClass = typeof window !== 'undefined' ? window.WebSocket : WebSocket;
-        const socket = new WebSocketClass(serverUrl) as any;
+        const socket = new WebSocketClass(serverUrl) as WebSocket;
 
         socket.onopen = () => {
           ws.value = socket as any;

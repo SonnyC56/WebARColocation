@@ -7,18 +7,19 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useWebXR } from '../composables/useWebXR';
+import type { Engine, Scene } from '@babylonjs/core';
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const { engine, scene, xrExperience, isInAR, isSupported, checkSupport, initializeEngine, enterAR, exitAR, dispose } = useWebXR();
 
-const props = defineProps<{
+defineProps<{
   autoStart?: boolean;
 }>();
 
 const emit = defineEmits<{
   'ar-entered': [];
   'ar-exited': [];
-  'engine-ready': [engine: any, scene: any];
+  'engine-ready': [engine: Engine, scene: Scene];
 }>();
 
 onMounted(async () => {
@@ -33,7 +34,7 @@ onMounted(async () => {
   // Initialize engine
   const initialized = await initializeEngine(canvasRef.value);
   if (initialized && engine.value && scene.value) {
-    emit('engine-ready', engine.value, scene.value);
+    emit('engine-ready', engine.value as Engine, scene.value as Scene);
   }
 });
 
