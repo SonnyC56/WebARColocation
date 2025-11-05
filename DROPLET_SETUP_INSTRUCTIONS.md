@@ -34,7 +34,33 @@ sudo apt install nginx certbot python3-certbot-nginx -y
 
 ### Phase 2: Application Setup
 
-**4. Create application directory:**
+**4. Setup GitHub Authentication (Choose ONE method):**
+
+**OPTION A: SSH Key (Recommended for Private Repos)**
+
+```bash
+# Generate SSH key if you don't have one
+ssh-keygen -t ed25519 -C "droplet-setup" -f ~/.ssh/id_ed25519 -N ""
+
+# Display public key
+echo "=== PUBLIC KEY - Copy this and add to GitHub ==="
+cat ~/.ssh/id_ed25519.pub
+echo "=== Add this key to GitHub: Settings -> SSH and GPG keys -> New SSH key ==="
+
+# Test SSH connection (will prompt to add GitHub to known_hosts)
+ssh -T git@github.com
+```
+
+**OPTION B: Personal Access Token (PAT) for HTTPS**
+
+```bash
+# Configure git to use token (you'll be prompted for token when cloning)
+git config --global credential.helper store
+# Note: You'll need to create a PAT at https://github.com/settings/tokens
+# Required scopes: repo (for private repos)
+```
+
+**5. Create application directory:**
 ```bash
 sudo mkdir -p /var/www/ar-backend
 sudo chown $USER:$USER /var/www/ar-backend
@@ -42,6 +68,21 @@ cd /var/www/ar-backend
 ```
 
 **5. Clone the repository:**
+
+**If using SSH (recommended):**
+```bash
+git clone git@github.com:SonnyC56/WebARColocation.git .
+cd backend
+```
+
+**If using HTTPS with PAT:**
+```bash
+# You'll be prompted for username and token
+git clone https://github.com/SonnyC56/WebARColocation.git .
+cd backend
+```
+
+**If repository is public (no auth needed):**
 ```bash
 git clone https://github.com/SonnyC56/WebARColocation.git .
 cd backend

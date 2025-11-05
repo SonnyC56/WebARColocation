@@ -48,7 +48,16 @@ sudo chown $USER:$USER $APP_DIR
 # Clone repository
 echo -e "${BLUE}📥 Cloning repository...${NC}"
 cd $APP_DIR
-git clone https://github.com/SonnyC56/WebARColocation.git .
+
+# Check if SSH key exists, if not prompt for method
+if [ -f ~/.ssh/id_ed25519.pub ] || [ -f ~/.ssh/id_rsa.pub ]; then
+    echo -e "${YELLOW}SSH key found. Using SSH clone...${NC}"
+    git clone git@github.com:SonnyC56/WebARColocation.git .
+else
+    echo -e "${YELLOW}No SSH key found. Using HTTPS clone...${NC}"
+    echo -e "${YELLOW}Note: If repo is private, you'll need GitHub PAT${NC}"
+    git clone https://github.com/SonnyC56/WebARColocation.git .
+fi
 
 # Install dependencies
 echo -e "${BLUE}📦 Installing dependencies...${NC}"
