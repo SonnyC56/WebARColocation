@@ -15,7 +15,7 @@ export interface DebugInfo {
 
 export function useARUI(scene: Ref<Scene | null>) {
   const advancedTexture = ref<AdvancedDynamicTexture | null>(null);
-  const showDebug = ref(false); // Hide debug by default - less clutter
+  const showDebug = ref(false);
   
   // UI elements
   const debugPanel = ref<Rectangle | null>(null);
@@ -35,25 +35,14 @@ export function useARUI(scene: Ref<Scene | null>) {
     }
 
     try {
-      // Create fullscreen UI texture with proper scaling for mobile
+      // Create fullscreen UI texture - don't set idealWidth/Height to avoid scaling issues
       advancedTexture.value = AdvancedDynamicTexture.CreateFullscreenUI('ARUI', true, scene.value);
-      // Use smaller ideal dimensions for better mobile scaling
-      advancedTexture.value.idealWidth = 1080;
-      advancedTexture.value.idealHeight = 1920; // Portrait orientation
       
-      // Create debug panel (top left)
-      createDebugPanel();
-      
-      // Create status bar (top right)
+      // Create UI elements
       createStatusBar();
-      
-      // Create center instruction
-      createCenterInstruction();
-      
-      // Create controls panel (bottom)
       createControlsPanel();
-      
-      // Create flash overlay (hidden by default)
+      createCenterInstruction();
+      createDebugPanel();
       createFlashOverlay();
       
       // Initialize audio context for sound
@@ -66,34 +55,227 @@ export function useARUI(scene: Ref<Scene | null>) {
     }
   };
 
+  const createStatusBar = () => {
+    if (!advancedTexture.value) return;
+
+    // Compact status bar at top center
+    const bar = new Rectangle('statusBar');
+    bar.width = '0.35'; // 35% of screen width
+    bar.height = '60px';
+    bar.cornerRadius = 8;
+    bar.color = 'rgba(255,255,255,0.2)';
+    bar.thickness = 2;
+    bar.background = 'rgba(0,0,0,0.75)';
+    bar.alpha = 0.9;
+    bar.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    bar.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    bar.top = '20px';
+    bar.paddingTop = '8px';
+    bar.paddingBottom = '8px';
+    bar.paddingLeft = '16px';
+    bar.paddingRight = '16px';
+    advancedTexture.value.addControl(bar);
+    statusBar.value = bar;
+  };
+
+  const updateStatusBar = (roomId: string, participantCount: number, anchorFound: boolean) => {
+    if (!statusBar.value) return;
+
+    // Clear existing content
+    Array.from(statusBar.value.children).forEach((child) => {
+      statusBar.value!.removeControl(child as Control);
+    });
+
+    // Create horizontal layout with three items
+    const container = new Rectangle('statusContainer');
+    container.width = '100%';
+    container.height = '100%';
+    container.thickness = 0;
+    container.background = 'transparent';
+    container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    statusBar.value.addControl(container);
+
+    const createStatusItem = (label: string, value: string, color: string = 'white') => {
+      const item = new Rectangle(`statusItem_${label}`);
+      item.width = '0.3'; // 30% of container width
+      item.height = '100%';
+      item.background = 'transparent';
+      item.thickness = 0;
+      item.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+      container.addControl(item);
+
+      const labelText = new TextBlock(`statusLabel_${label}`, label);
+      labelText.color = 'rgba(255,255,255,0.8)';
+      labelText.fontSize = 11;
+      labelText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      labelText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+      item.addControl(labelText);
+
+      const valueText = new TextBlock(`statusValue_${label}`, value);
+      valueText.color = color;
+      valueText.fontSize = 16;
+      valueText.fontWeight = 'bold';
+      valueText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      valueText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+      valueText.top = '20px';
+      item.addControl(valueText);
+    };
+
+    createStatusItem('Room', roomId.substring(0, 6) || 'None');
+    createStatusItem('Users', participantCount.toString());
+    createStatusItem('Anchor', anchorFound ? '✓' : '✗', anchorFound ? '#4ade80' : '#fbbf24');
+  };
+
+  const createControlsPanel = () => {
+    if (!advancedTexture.value) return;
+
+    const panel = new Rectangle('controlsPanel');
+    panel.width = '0.85'; // 85% of screen width
+    panel.height = '70px';
+    panel.cornerRadius = 12;
+    panel.color = 'rgba(255,255,255,0.2)';
+    panel.thickness = 2;
+    panel.background = 'rgba(0,0,0,0.75)';
+    panel.alpha = 0.9;
+    panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    panel.top = '-100px'; // Negative top for bottom alignment
+    panel.paddingTop = '12px';
+    panel.paddingBottom = '12px';
+    panel.paddingLeft = '16px';
+    panel.paddingRight = '16px';
+    advancedTexture.value.addControl(panel);
+    controlsPanel.value = panel;
+  };
+
+  const createButton = (name: string, text: string, onClick: () => void, color: string = '#667eea', enabled: boolean = true): Button => {
+    const button = Button.CreateSimpleButton(name, text);
+    button.width = '0.28'; // 28% of panel width
+    button.height = '46px';
+    button.color = 'white';
+    button.fontSize = 16;
+    button.fontWeight = 'bold';
+    button.background = color;
+    button.cornerRadius = 8;
+    button.alpha = enabled ? 1 : 0.5;
+    button.isEnabled = enabled;
+    button.thickness = 0;
+    button.onPointerClickObservable.add(() => {
+      if (enabled) {
+        onClick();
+      }
+    });
+    return button;
+  };
+
+  const updateControls = (onPlaceObject: () => void, onExitAR: () => void, onFocusCamera: () => void, anchorFound: boolean) => {
+    if (!controlsPanel.value) return;
+
+    // Clear existing buttons
+    Array.from(controlsPanel.value.children).forEach((child) => {
+      controlsPanel.value!.removeControl(child as Control);
+    });
+
+    // Create button container
+    const buttonContainer = new Rectangle('buttonContainer');
+    buttonContainer.width = '100%';
+    buttonContainer.height = '100%';
+    buttonContainer.thickness = 0;
+    buttonContainer.background = 'transparent';
+    controlsPanel.value.addControl(buttonContainer);
+
+    const focusBtn = createButton('focusBtn', 'Focus', onFocusCamera, '#22c55e', true);
+    focusBtn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    buttonContainer.addControl(focusBtn);
+
+    const placeBtn = createButton('placeBtn', 'Place', onPlaceObject, '#667eea', anchorFound);
+    placeBtn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    buttonContainer.addControl(placeBtn);
+
+    const exitBtn = createButton('exitBtn', 'Exit', onExitAR, '#ef4444', true);
+    exitBtn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    buttonContainer.addControl(exitBtn);
+  };
+
+  const createCenterInstruction = () => {
+    if (!advancedTexture.value) return;
+
+    const instruction = new Rectangle('centerInstruction');
+    instruction.width = '0.8'; // 80% of screen width
+    instruction.height = 'auto';
+    instruction.cornerRadius = 16;
+    instruction.color = 'rgba(255,255,255,0.3)';
+    instruction.thickness = 3;
+    instruction.background = 'rgba(0,0,0,0.85)';
+    instruction.alpha = 0.95;
+    instruction.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    instruction.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    instruction.adaptHeightToChildren = true;
+    instruction.paddingTop = '32px';
+    instruction.paddingBottom = '32px';
+    instruction.paddingLeft = '24px';
+    instruction.paddingRight = '24px';
+    instruction.isVisible = false;
+    advancedTexture.value.addControl(instruction);
+    centerInstruction.value = instruction;
+  };
+
+  const showCenterInstruction = (show: boolean, message?: string) => {
+    if (!centerInstruction.value) return;
+    
+    centerInstruction.value.isVisible = show;
+    
+    if (show && message) {
+      // Clear existing content
+      Array.from(centerInstruction.value.children).forEach((child) => {
+        centerInstruction.value!.removeControl(child as Control);
+      });
+
+      const title = new TextBlock('instructionTitle', 'Scan QR Code');
+      title.color = 'white';
+      title.fontSize = 28;
+      title.fontWeight = 'bold';
+      title.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      title.paddingBottom = '16px';
+      centerInstruction.value.addControl(title);
+
+      const desc = new TextBlock('instructionDesc', message || 'Point your device at the QR marker to anchor the AR experience');
+      desc.color = 'rgba(255,255,255,0.9)';
+      desc.fontSize = 18;
+      desc.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      desc.textWrapping = true;
+      centerInstruction.value.addControl(desc);
+    }
+  };
+
   const createDebugPanel = () => {
     if (!advancedTexture.value) return;
 
     const panel = new Rectangle('debugPanel');
-    panel.width = '200px'; // Smaller width
+    panel.width = '0.4'; // 40% of screen width
     panel.height = 'auto';
-    panel.cornerRadius = 6;
-    panel.color = 'rgba(255,255,255,0.1)';
-    panel.thickness = 1;
-    panel.background = 'rgba(0,0,0,0.6)'; // More transparent
-    panel.alpha = 0.7; // Less opaque
+    panel.cornerRadius = 8;
+    panel.color = 'rgba(255,255,255,0.2)';
+    panel.thickness = 2;
+    panel.background = 'rgba(0,0,0,0.8)';
+    panel.alpha = 0.9;
     panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    panel.left = '10px';
-    panel.top = '10px';
+    panel.left = '15px';
+    panel.top = '100px';
     panel.adaptHeightToChildren = true;
-    panel.paddingTop = '6px';
-    panel.paddingBottom = '6px';
-    panel.paddingLeft = '8px';
-    panel.paddingRight = '8px';
-    panel.isVisible = false; // Hidden by default
+    panel.paddingTop = '10px';
+    panel.paddingBottom = '10px';
+    panel.paddingLeft = '12px';
+    panel.paddingRight = '12px';
+    panel.isVisible = false;
     advancedTexture.value.addControl(panel);
     debugPanel.value = panel;
 
     // Header
     const header = new Rectangle('debugHeader');
     header.width = '100%';
-    header.height = '30px';
+    header.height = '32px';
     header.background = 'transparent';
     header.thickness = 0;
     header.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
@@ -101,18 +283,18 @@ export function useARUI(scene: Ref<Scene | null>) {
 
     const headerText = new TextBlock('debugHeaderText', 'DEBUG');
     headerText.color = 'white';
-    headerText.fontSize = 12;
+    headerText.fontSize = 14;
     headerText.fontWeight = 'bold';
     headerText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     header.addControl(headerText);
 
     const toggleBtn = Button.CreateSimpleButton('debugToggle', '▲');
-    toggleBtn.width = '30px';
-    toggleBtn.height = '24px';
+    toggleBtn.width = '32px';
+    toggleBtn.height = '28px';
     toggleBtn.color = 'white';
-    toggleBtn.fontSize = 12;
-    toggleBtn.background = 'rgba(255,255,255,0.15)';
-    toggleBtn.cornerRadius = 3;
+    toggleBtn.fontSize = 14;
+    toggleBtn.background = 'rgba(255,255,255,0.2)';
+    toggleBtn.cornerRadius = 4;
     toggleBtn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
     toggleBtn.onPointerClickObservable.add(() => {
       showDebug.value = !showDebug.value;
@@ -132,81 +314,9 @@ export function useARUI(scene: Ref<Scene | null>) {
     updateDebugContent();
   };
 
-  const createStatusBar = () => {
-    if (!advancedTexture.value) return;
-
-    const bar = new Rectangle('statusBar');
-    bar.width = '180px'; // Smaller, more compact
-    bar.height = 'auto';
-    bar.cornerRadius = 6;
-    bar.color = 'rgba(255,255,255,0.1)';
-    bar.thickness = 1;
-    bar.background = 'rgba(0,0,0,0.6)'; // More transparent
-    bar.alpha = 0.7; // Less opaque
-    bar.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    bar.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    bar.left = '-190px'; // Negative left for right alignment
-    bar.top = '10px';
-    bar.adaptHeightToChildren = true;
-    bar.paddingTop = '6px';
-    bar.paddingBottom = '6px';
-    bar.paddingLeft = '8px';
-    bar.paddingRight = '8px';
-    advancedTexture.value.addControl(bar);
-    statusBar.value = bar;
-  };
-
-  const createCenterInstruction = () => {
-    if (!advancedTexture.value) return;
-
-    const instruction = new Rectangle('centerInstruction');
-    instruction.width = '400px';
-    instruction.height = 'auto';
-    instruction.cornerRadius = 16;
-    instruction.color = 'rgba(255,255,255,0.2)';
-    instruction.thickness = 2;
-    instruction.background = '#000000';
-    instruction.alpha = 0.8;
-    instruction.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-    instruction.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-    instruction.adaptHeightToChildren = true;
-    instruction.paddingTop = '24px';
-    instruction.paddingBottom = '24px';
-    instruction.paddingLeft = '32px';
-    instruction.paddingRight = '32px';
-    instruction.isVisible = false;
-    advancedTexture.value.addControl(instruction);
-    centerInstruction.value = instruction;
-  };
-
-  const createControlsPanel = () => {
-    if (!advancedTexture.value) return;
-
-    const panel = new Rectangle('controlsPanel');
-    panel.width = '0px'; // Will adapt to children
-    panel.height = 'auto';
-    panel.cornerRadius = 6;
-    panel.color = 'rgba(255,255,255,0.1)';
-    panel.thickness = 1;
-    panel.background = 'rgba(0,0,0,0.6)'; // More transparent
-    panel.alpha = 0.7; // Less opaque
-    panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-    panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-    panel.top = '-80px'; // Closer to bottom
-    panel.adaptWidthToChildren = true;
-    panel.adaptHeightToChildren = true;
-    panel.paddingTop = '10px';
-    panel.paddingBottom = '10px';
-    panel.paddingLeft = '12px';
-    panel.paddingRight = '12px';
-    advancedTexture.value.addControl(panel);
-    controlsPanel.value = panel;
-  };
-
   const updateDebugContent = () => {
     if (!debugPanel.value) return;
     
-    // Show/hide entire panel based on showDebug state
     debugPanel.value.isVisible = showDebug.value;
     
     if (!showDebug.value) {
@@ -218,9 +328,7 @@ export function useARUI(scene: Ref<Scene | null>) {
 
     // Clear existing content
     Array.from(content.children).forEach((child) => {
-      if (child.name !== 'debugHeader') {
-        content.removeControl(child as Control);
-      }
+      content.removeControl(child as Control);
     });
     content.isVisible = true;
   };
@@ -241,158 +349,42 @@ export function useARUI(scene: Ref<Scene | null>) {
     const createDebugLine = (label: string, value: string, color: string = 'white') => {
       const line = new Rectangle(`debugLine_${label}`);
       line.width = '100%';
-      line.height = '20px';
+      line.height = '24px';
       line.background = 'transparent';
       line.thickness = 0;
       line.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-      line.paddingBottom = '2px';
+      line.paddingBottom = '3px';
       content.addControl(line);
 
       const labelText = new TextBlock(`debugLabel_${label}`, label + ':');
-      labelText.color = 'rgba(255,255,255,0.7)';
-      labelText.fontSize = 10;
+      labelText.color = 'rgba(255,255,255,0.8)';
+      labelText.fontSize = 12;
       labelText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
       labelText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-      labelText.width = '90px';
-      labelText.height = '20px';
+      labelText.width = '0.5'; // 50% of line width
       line.addControl(labelText);
 
       const valueText = new TextBlock(`debugValue_${label}`, value);
       valueText.color = color;
-      valueText.fontSize = 10;
+      valueText.fontSize = 12;
       valueText.fontWeight = '600';
       valueText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
       valueText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-      valueText.width = '100px';
-      valueText.height = '20px';
+      valueText.width = '0.45'; // 45% of line width
       line.addControl(valueText);
     };
 
-    createDebugLine('WebXR', info.webxrSupported ? 'Supported' : 'Not Supported', info.webxrSupported ? '#4ade80' : '#f87171');
-    createDebugLine('AR Session', info.arActive ? 'Active' : 'Inactive', info.arActive ? '#4ade80' : '#fbbf24');
-    createDebugLine('Image Tracking', info.trackingInitialized ? 'Init' : 'Not Init', info.trackingInitialized ? '#4ade80' : '#fbbf24');
-    createDebugLine('QR Anchor', info.anchorFound ? 'Found' : 'Not Found', info.anchorFound ? '#4ade80' : '#fbbf24');
-    createDebugLine('Network', info.networkConnected ? 'Connected' : 'Disconnected', info.networkConnected ? '#4ade80' : '#f87171');
-    createDebugLine('Room', info.roomId || 'None', 'white');
-    createDebugLine('Objects', info.objectCount.toString(), 'white');
+    createDebugLine('WebXR', info.webxrSupported ? 'Yes' : 'No', info.webxrSupported ? '#4ade80' : '#f87171');
+    createDebugLine('AR', info.arActive ? 'Active' : 'Inactive', info.arActive ? '#4ade80' : '#fbbf24');
+    createDebugLine('Tracking', info.trackingInitialized ? 'Init' : 'No', info.trackingInitialized ? '#4ade80' : '#fbbf24');
+    createDebugLine('Anchor', info.anchorFound ? 'Found' : 'None', info.anchorFound ? '#4ade80' : '#fbbf24');
+    createDebugLine('Network', info.networkConnected ? 'On' : 'Off', info.networkConnected ? '#4ade80' : '#f87171');
+    createDebugLine('Room', info.roomId || 'None');
+    createDebugLine('Objects', info.objectCount.toString());
     
     if (info.lastError) {
-      createDebugLine('Error', info.lastError, '#f87171');
+      createDebugLine('Error', info.lastError.substring(0, 20), '#f87171');
     }
-  };
-
-  const updateStatusBar = (roomId: string, participantCount: number, anchorFound: boolean) => {
-    if (!statusBar.value) return;
-
-    // Clear existing content
-    Array.from(statusBar.value.children).forEach((child) => {
-      statusBar.value!.removeControl(child as Control);
-    });
-
-    const createStatusItem = (label: string, value: string, color: string = 'white') => {
-      const item = new Rectangle(`statusItem_${label}`);
-      item.width = '100%';
-      item.height = '28px';
-      item.background = 'transparent';
-      item.thickness = 0;
-      item.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-      item.paddingBottom = '4px';
-      statusBar.value!.addControl(item);
-
-      const labelText = new TextBlock(`statusLabel_${label}`, label.toUpperCase());
-      labelText.color = 'rgba(255,255,255,0.7)';
-      labelText.fontSize = 9;
-      labelText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-      labelText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      labelText.height = '14px';
-      item.addControl(labelText);
-
-      const valueText = new TextBlock(`statusValue_${label}`, value);
-      valueText.color = color;
-      valueText.fontSize = 12;
-      valueText.fontWeight = '600';
-      valueText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-      valueText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-      valueText.top = '14px';
-      valueText.height = '14px';
-      item.addControl(valueText);
-    };
-
-    createStatusItem('Room', roomId);
-    createStatusItem('Participants', participantCount.toString());
-    createStatusItem('Anchor', anchorFound ? 'Found' : 'Not Found', anchorFound ? '#4ade80' : '#fbbf24');
-  };
-
-  const showCenterInstruction = (show: boolean, message?: string) => {
-    if (!centerInstruction.value) return;
-    
-    centerInstruction.value.isVisible = show;
-    
-    if (show && message) {
-      // Clear existing content
-      Array.from(centerInstruction.value.children).forEach((child) => {
-        centerInstruction.value!.removeControl(child as Control);
-      });
-
-      const title = new TextBlock('instructionTitle', 'Scan QR Code');
-      title.color = 'white';
-      title.fontSize = 32;
-      title.fontWeight = 'bold';
-      title.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-      title.paddingBottom = '12px';
-      centerInstruction.value.addControl(title);
-
-      const desc = new TextBlock('instructionDesc', message || 'Point your device at the QR marker to anchor the AR experience');
-      desc.color = 'rgba(255,255,255,0.9)';
-      desc.fontSize = 20;
-      desc.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-      desc.textWrapping = true;
-      centerInstruction.value.addControl(desc);
-    }
-  };
-
-  const createButton = (name: string, text: string, onClick: () => void, color: string = '#667eea', enabled: boolean = true): Button => {
-    const button = Button.CreateSimpleButton(name, text);
-    button.width = '80px'; // Smaller buttons
-    button.height = '44px';
-    button.color = 'white';
-    button.fontSize = 14;
-    button.fontWeight = '600';
-    button.background = color;
-    button.cornerRadius = 6;
-    button.alpha = enabled ? 1 : 0.5;
-    button.isEnabled = enabled;
-    button.paddingLeft = '8px';
-    button.paddingRight = '8px';
-    button.thickness = 0;
-    button.onPointerClickObservable.add(() => {
-      if (enabled) {
-        onClick();
-      }
-    });
-    return button;
-  };
-
-  const updateControls = (onPlaceObject: () => void, onExitAR: () => void, onFocusCamera: () => void, anchorFound: boolean) => {
-    if (!controlsPanel.value) return;
-
-    // Clear existing buttons
-    Array.from(controlsPanel.value.children).forEach((child) => {
-      controlsPanel.value!.removeControl(child as Control);
-    });
-
-    const focusBtn = createButton('focusBtn', 'Focus', onFocusCamera, '#22c55e', true);
-    focusBtn.paddingRight = '6px';
-    controlsPanel.value.addControl(focusBtn);
-
-    const placeBtn = createButton('placeBtn', 'Place', onPlaceObject, '#667eea', anchorFound);
-    placeBtn.paddingLeft = '6px';
-    placeBtn.paddingRight = '6px';
-    controlsPanel.value.addControl(placeBtn);
-
-    const exitBtn = createButton('exitBtn', 'Exit', onExitAR, '#ef4444', true);
-    exitBtn.paddingLeft = '6px';
-    controlsPanel.value.addControl(exitBtn);
   };
 
   const createFlashOverlay = () => {
@@ -407,7 +399,7 @@ export function useARUI(scene: Ref<Scene | null>) {
     overlay.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     overlay.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
     overlay.isPointerBlocker = false;
-    overlay.zIndex = 1000; // On top of everything
+    overlay.zIndex = 1000;
     overlay.isVisible = true;
     advancedTexture.value.addControl(overlay);
     flashOverlay.value = overlay;
@@ -428,16 +420,15 @@ export function useARUI(scene: Ref<Scene | null>) {
     }
 
     try {
-      // Create a pleasant success sound (two-tone chime)
       const oscillator1 = audioContext.createOscillator();
       const oscillator2 = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
       oscillator1.type = 'sine';
-      oscillator1.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+      oscillator1.frequency.setValueAtTime(523.25, audioContext.currentTime);
       
       oscillator2.type = 'sine';
-      oscillator2.frequency.setValueAtTime(659.25, audioContext.currentTime); // E5
+      oscillator2.frequency.setValueAtTime(659.25, audioContext.currentTime);
 
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
@@ -460,13 +451,11 @@ export function useARUI(scene: Ref<Scene | null>) {
 
     playSuccessSound();
 
-    // Flash animation: fade in quickly, then fade out smoothly
     const flash = flashOverlay.value;
     flash.alpha = 0;
     
-    // Use requestAnimationFrame for smooth animation
     let startTime: number | null = null;
-    const duration = 300; // Total animation duration in ms
+    const duration = 300;
     
     const animate = (timestamp: number) => {
       if (startTime === null) {
@@ -477,15 +466,12 @@ export function useARUI(scene: Ref<Scene | null>) {
       const progress = elapsed / duration;
       
       if (progress < 0.3) {
-        // Fade in (first 30% of duration)
         flash.alpha = (progress / 0.3) * 0.8;
         requestAnimationFrame(animate);
       } else if (progress < 1.0) {
-        // Fade out (remaining 70% of duration)
         flash.alpha = 0.8 * (1 - (progress - 0.3) / 0.7);
         requestAnimationFrame(animate);
       } else {
-        // Animation complete
         flash.alpha = 0;
       }
     };
@@ -519,4 +505,3 @@ export function useARUI(scene: Ref<Scene | null>) {
     dispose,
   };
 }
-
