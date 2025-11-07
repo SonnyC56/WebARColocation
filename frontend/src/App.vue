@@ -101,6 +101,39 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
       // Trigger flash and sound when anchor is first found
       if (anchorFound.value && !wasFound && arUI) {
         arUI.triggerFlash();
+        
+        // Create test cube when anchor is first found (attached to anchor)
+        if (scene.value && imageTracking?.anchorNode.value) {
+          setTimeout(() => {
+            try {
+              // Check if test cube already exists
+              const existingCube = scene.value!.getMeshByName('test-cube');
+              if (existingCube) {
+                existingCube.dispose();
+              }
+              
+              // Create a larger, more visible test cube attached to the anchor
+              const testCube = MeshBuilder.CreateBox('test-cube', { size: 0.2 }, scene.value as any);
+              
+              // Parent to anchor node so it appears relative to the QR code
+              testCube.parent = imageTracking!.anchorNode.value as any;
+              
+              // Position relative to anchor: 10cm above the QR code, centered
+              testCube.position = new Vector3(0, 0.1, 0);
+              
+              const material = new StandardMaterial('test-mat', scene.value as any);
+              material.diffuseColor = new Color3(1, 0, 0); // Bright red
+              material.emissiveColor = new Color3(0.5, 0, 0); // Make it glow slightly
+              testCube.material = material;
+              
+              console.log('Test cube created attached to anchor at position:', testCube.position);
+              console.log('Anchor node position:', imageTracking!.anchorNode.value!.position);
+            } catch (err: any) {
+              console.error('Failed to create test cube:', err);
+              lastError.value = `Test cube error: ${err.message}`;
+            }
+          }, 500);
+        }
       }
       
       // Update UI
@@ -149,29 +182,7 @@ const handleAREntered = () => {
     arUI.updateDebugInfo(debugInfo.value);
   }
   
-  // Add a test cube to verify 3D rendering works (in world space, not anchor-relative)
-  if (scene.value) {
-    setTimeout(() => {
-      if (scene.value) {
-        try {
-          // Create a larger, more visible test cube
-          const testCube = MeshBuilder.CreateBox('test-cube', { size: 0.3 }, scene.value as any);
-          testCube.position = new Vector3(0, 1.5, -2); // 2 meters in front, 1.5m up (eye level)
-          
-          const material = new StandardMaterial('test-mat', scene.value as any);
-          material.diffuseColor = new Color3(1, 0, 0); // Bright red
-          material.emissiveColor = new Color3(0.5, 0, 0); // Make it glow slightly
-          testCube.material = material;
-          
-          console.log('Test cube created at world position:', testCube.position);
-          console.log('Test cube should be visible in AR view');
-        } catch (err: any) {
-          console.error('Failed to create test cube:', err);
-          lastError.value = `Test cube error: ${err.message}`;
-        }
-      }
-    }, 1000);
-  }
+  // Test cube will be created when anchor is found (see watch handler above)
 };
 
 const handleARExited = () => {
