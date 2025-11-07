@@ -16,13 +16,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch } from 'vue';
 import SessionUI from './components/SessionUI.vue';
 import ARScene from './components/ARScene.vue';
 import { useSessionStore } from './stores/session';
 import { useImageTracking } from './composables/useImageTracking';
-import { useARUI } from './composables/useARUI';
-import type { DebugInfo } from './composables/useARUI';
+// import { useARUI } from './composables/useARUI';
+// import type { DebugInfo } from './composables/useARUI';
 import { Mesh, MeshBuilder, Vector3, Quaternion, StandardMaterial, Color3 } from '@babylonjs/core';
 import type { Scene, Engine } from '@babylonjs/core';
 
@@ -33,23 +33,24 @@ const anchorFound = ref(false);
 const scene = ref<Scene | null>(null);
 const engine = ref<Engine | null>(null);
 const placedObjects = ref<Map<string, Mesh>>(new Map());
+const playerAvatars = ref<Map<string, Mesh>>(new Map()); // Track player avatar meshes
 const lastError = ref<string | null>(null);
 const trackingInitialized = ref(false);
 
 let imageTracking: ReturnType<typeof useImageTracking> | null = null;
-let arUI: ReturnType<typeof useARUI> | null = null;
+// let arUI: ReturnType<typeof useARUI> | null = null; // UI disabled
 
-// Debug info computed property
-const debugInfo = computed<DebugInfo>(() => ({
-  webxrSupported: arSceneRef.value?.isSupported || false,
-  arActive: isInARMode.value && (arSceneRef.value?.isInAR || false),
-  trackingInitialized: trackingInitialized.value,
-  anchorFound: anchorFound.value,
-  networkConnected: store.networkSync.connected,
-  roomId: store.roomId,
-  objectCount: placedObjects.value.size,
-  lastError: lastError.value,
-}));
+// Debug info computed property - currently unused but kept for future debugging
+// const debugInfo = computed<DebugInfo>(() => ({
+//   webxrSupported: arSceneRef.value?.isSupported || false,
+//   arActive: isInARMode.value && (arSceneRef.value?.isInAR || false),
+//   trackingInitialized: trackingInitialized.value,
+//   anchorFound: anchorFound.value,
+//   networkConnected: store.networkSync.connected,
+//   roomId: store.roomId,
+//   objectCount: placedObjects.value.size,
+//   lastError: lastError.value,
+// }));
 
 const handleStartAR = async () => {
   if (!arSceneRef.value) return;
@@ -65,11 +66,11 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
   engine.value = eng;
   scene.value = scn;
   
-  // Initialize Babylon.js GUI for AR overlay
-  arUI = useARUI(scene as any);
-  if (arUI) {
-    arUI.initializeGUI();
-  }
+  // UI disabled - focusing on 3D objects only
+  // arUI = useARUI(scene as any);
+  // if (arUI) {
+  //   arUI.initializeGUI();
+  // }
   
   // Initialize image tracking
   if (scn && arSceneRef.value?.xrExperience) {
@@ -104,69 +105,74 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
       const wasFound = anchorFound.value;
       anchorFound.value = tracking || false;
       
-      // Trigger flash and sound when anchor is first found
-      if (anchorFound.value && !wasFound && arUI) {
-        arUI.triggerFlash();
-        
-        // Create test cube when anchor is first found (attached to anchor)
-        if (scene.value && imageTracking?.anchorNode.value) {
-          setTimeout(() => {
-            try {
-              // Check if test cube already exists
-              const existingCube = scene.value!.getMeshByName('test-cube');
-              if (existingCube) {
-                existingCube.dispose();
-              }
-              
-              // Create a larger, more visible test cube attached to the anchor
-              const testCube = MeshBuilder.CreateBox('test-cube', { size: 0.15 }, scene.value as any);
-              
-              // Parent to anchor node so it appears relative to the QR code
-              testCube.parent = imageTracking!.anchorNode.value as any;
-              
-              // Position relative to anchor: 15cm above the QR code, centered
-              testCube.position = new Vector3(0, 0.15, 0);
-              
-              const material = new StandardMaterial('test-mat', scene.value as any);
-              material.diffuseColor = new Color3(1, 0, 0); // Bright red
-              material.emissiveColor = new Color3(0.8, 0, 0); // Make it glow brightly
-              material.specularColor = new Color3(0, 0, 0); // No specular
-              testCube.material = material;
-              
-              console.log('✅ Test cube created and parented to anchor');
-              console.log('   Cube local position:', testCube.position);
-              console.log('   Anchor world position:', imageTracking!.anchorNode.value!.position);
-              console.log('   Anchor world rotation:', imageTracking!.anchorNode.value!.rotationQuaternion);
-              console.log('   🎯 The cube should appear 15cm above the QR code');
-              
-              // Create a small sphere at anchor origin for reference
-              const anchorMarker = MeshBuilder.CreateSphere('anchor-marker', { diameter: 0.05 }, scene.value as any);
-              anchorMarker.parent = imageTracking!.anchorNode.value as any;
-              anchorMarker.position = Vector3.Zero();
-              const markerMat = new StandardMaterial('marker-mat', scene.value as any);
-              markerMat.diffuseColor = new Color3(0, 1, 0); // Green
-              markerMat.emissiveColor = new Color3(0, 0.8, 0);
-              anchorMarker.material = markerMat;
-              console.log('✅ Green anchor marker created at QR origin');
-            } catch (err: any) {
-              console.error('Failed to create test cube:', err);
-              lastError.value = `Test cube error: ${err.message}`;
-            }
-          }, 500);
-        }
+              // Trigger flash when anchor is first found (UI disabled for now)
+              // if (anchorFound.value && !wasFound && arUI) {
+              //   arUI.triggerFlash();
+              // }
+                
+              if (anchorFound.value && !wasFound) {
+                // Create orientation marker when anchor is first found (attached to anchor)
+                if (scene.value && imageTracking?.anchorNode.value) {
+                  setTimeout(() => {
+                    try {
+                      // Clean up existing markers
+                      const existingCube = scene.value!.getMeshByName('orientation-cube');
+                      const existingCone = scene.value!.getMeshByName('orientation-cone');
+                      const existingMarker = scene.value!.getMeshByName('anchor-marker');
+                      if (existingCube) existingCube.dispose();
+                      if (existingCone) existingCone.dispose();
+                      if (existingMarker) existingMarker.dispose();
+                      
+                      // Create orientation marker: cube with cone pointing in +Z direction
+                      const cube = MeshBuilder.CreateBox('orientation-cube', { size: 0.1 }, scene.value as any);
+                      cube.parent = imageTracking!.anchorNode.value as any;
+                      cube.position = new Vector3(0, 0.15, 0); // 15cm above QR
+                      
+                      const cubeMat = new StandardMaterial('cube-mat', scene.value as any);
+                      cubeMat.diffuseColor = new Color3(0.2, 0.6, 1); // Blue
+                      cubeMat.emissiveColor = new Color3(0.1, 0.3, 0.5);
+                      cubeMat.specularColor = new Color3(0, 0, 0);
+                      cube.material = cubeMat;
+                      
+                      // Create cone pointing in +Z direction (forward)
+                      const cone = MeshBuilder.CreateCylinder('orientation-cone', { 
+                        diameterTop: 0,
+                        diameterBottom: 0.06,
+                        height: 0.12,
+                        tessellation: 8
+                      }, scene.value as any);
+                      cone.parent = imageTracking!.anchorNode.value as any;
+                      // Position cone on the +Z side of cube
+                      cone.position = new Vector3(0, 0.15, 0.11); // 15cm up, 11cm forward (5cm from cube face + 6cm cone length)
+                      cone.rotation = new Vector3(Math.PI / 2, 0, 0); // Point forward
+                      
+                      const coneMat = new StandardMaterial('cone-mat', scene.value as any);
+                      coneMat.diffuseColor = new Color3(1, 0.8, 0); // Yellow/Orange
+                      coneMat.emissiveColor = new Color3(0.5, 0.4, 0);
+                      coneMat.specularColor = new Color3(0, 0, 0);
+                      cone.material = coneMat;
+                      
+                      // Small green sphere at QR origin for reference
+                      const anchorMarker = MeshBuilder.CreateSphere('anchor-marker', { diameter: 0.03 }, scene.value as any);
+                      anchorMarker.parent = imageTracking!.anchorNode.value as any;
+                      anchorMarker.position = Vector3.Zero();
+                      const markerMat = new StandardMaterial('marker-mat', scene.value as any);
+                      markerMat.diffuseColor = new Color3(0, 1, 0);
+                      markerMat.emissiveColor = new Color3(0, 0.5, 0);
+                      anchorMarker.material = markerMat;
+                      
+                      console.log('✅ Orientation marker created (blue cube + yellow cone pointing +Z)');
+                      console.log('   Position: 15cm above QR, cone points forward');
+                      console.log('   Green sphere marks QR center');
+                    } catch (err: any) {
+                      console.error('Failed to create orientation marker:', err);
+                      lastError.value = `Marker error: ${err.message}`;
+                    }
+                  }, 500);
+                }
       }
-      
-      // Update UI
-      if (arUI) {
-        arUI.updateControls(
-          handlePlaceObject,
-          handleExitAR,
-          handleFocusCamera,
-          anchorFound.value
-        );
-        arUI.updateStatusBar(store.roomId || 'None', store.participantCount, anchorFound.value);
-        arUI.showCenterInstruction(!anchorFound.value);
-      }
+              
+              // UI disabled for now
       
       if (tracking && imageTracking?.anchorNode.value) {
         // Send anchor found event
@@ -177,6 +183,9 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
           [position.x, position.y, position.z],
           [rotation.x, rotation.y, rotation.z, rotation.w]
         );
+        
+        // Start sending our player pose updates (every 100ms)
+        startPlayerPoseUpdates();
       }
     });
   }
@@ -185,134 +194,256 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
   setupNetworkHandlers();
 };
 
+// Send player pose updates to network
+let playerPoseInterval: number | null = null;
+const startPlayerPoseUpdates = () => {
+  if (playerPoseInterval) return; // Already running
+  
+  playerPoseInterval = window.setInterval(() => {
+    if (!arSceneRef.value?.xrExperience || !anchorFound.value) return;
+    
+    try {
+      const xr = arSceneRef.value.xrExperience;
+      const baseExperience = xr.baseExperience;
+      const camera = xr.input.xrCamera;
+      
+      if (camera && baseExperience.state === 2) { // IN_SESSION
+        const position = camera.position;
+        const rotation = camera.rotationQuaternion || Quaternion.Identity();
+        
+        // Send pose relative to world origin (anchor)
+        store.networkSync.sendPlayerPose(
+          [position.x, position.y, position.z],
+          [rotation.x, rotation.y, rotation.z, rotation.w]
+        );
+      }
+    } catch (error) {
+      console.warn('Failed to send player pose:', error);
+    }
+  }, 100); // 10 updates per second
+  
+  console.log('🎮 Started sending player pose updates');
+};
+
+const stopPlayerPoseUpdates = () => {
+  if (playerPoseInterval) {
+    clearInterval(playerPoseInterval);
+    playerPoseInterval = null;
+    console.log('🎮 Stopped sending player pose updates');
+  }
+};
+
 const handleAREntered = () => {
   console.log('AR entered');
   lastError.value = null;
   
-  // Update UI
-  if (arUI) {
-    arUI.updateControls(
-      handlePlaceObject,
-      handleExitAR,
-      handleFocusCamera,
-      anchorFound.value
-    );
-    arUI.updateStatusBar(store.roomId || 'None', store.participantCount, anchorFound.value);
-    arUI.showCenterInstruction(!anchorFound.value);
-    arUI.updateDebugInfo(debugInfo.value);
-  }
-  
-  // Test cube will be created when anchor is found (see watch handler above)
+  // UI disabled
+  // Test object (cube + cone) will be created when anchor is found (see watch handler above)
 };
 
 const handleARExited = () => {
   console.log('AR exited');
   isInARMode.value = false;
+  stopPlayerPoseUpdates();
+  
+  // Clean up all player avatars
+  playerAvatars.value.forEach((avatar) => {
+    avatar.dispose();
+  });
+  playerAvatars.value.clear();
 };
 
-const handlePlaceObject = () => {
-  if (!scene.value || !imageTracking?.anchorNode.value) return;
-  
-  // Place a simple cube at the anchor position (offset forward)
-  const objectId = `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const offset = new Vector3(0, 0.1, 0.3); // 30cm forward, 10cm up
-  
-  const mesh = MeshBuilder.CreateBox(objectId, { size: 0.1 }, scene.value as any);
-  
-  if (imageTracking.anchorNode.value) {
-      mesh.parent = imageTracking.anchorNode.value as any;
-    mesh.position = offset;
-  }
-  
-  placedObjects.value.set(objectId, mesh);
-  
-  // Send object creation to network
-  const worldPos = imageTracking.getWorldPosition(offset);
-  const worldRot = mesh.rotationQuaternion || Quaternion.Identity();
-  
-  store.networkSync.sendObjectCreate(
-    objectId,
-    [worldPos.x, worldPos.y, worldPos.z],
-    [worldRot.x, worldRot.y, worldRot.z, worldRot.w],
-    'cube'
-  );
-};
+// UI control handlers - currently unused, kept for future use
+// const handlePlaceObject = () => {
+//   if (!scene.value || !imageTracking?.anchorNode.value) return;
+//   
+//   // Place a simple cube at the anchor position (offset forward)
+//   const objectId = `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+//   const offset = new Vector3(0, 0.1, 0.3); // 30cm forward, 10cm up
+//   
+//   const mesh = MeshBuilder.CreateBox(objectId, { size: 0.1 }, scene.value as any);
+//   
+//   if (imageTracking.anchorNode.value) {
+//       mesh.parent = imageTracking.anchorNode.value as any;
+//     mesh.position = offset;
+//   }
+//   
+//   placedObjects.value.set(objectId, mesh);
+//   
+//   // Send object creation to network
+//   const worldPos = imageTracking.getWorldPosition(offset);
+//   const worldRot = mesh.rotationQuaternion || Quaternion.Identity();
+//   
+//   store.networkSync.sendObjectCreate(
+//     objectId,
+//     [worldPos.x, worldPos.y, worldPos.z],
+//     [worldRot.x, worldRot.y, worldRot.z, worldRot.w],
+//     'cube'
+//   );
+// };
 
-const handleExitAR = async () => {
-  if (arSceneRef.value) {
-    await arSceneRef.value.exitAR();
-  }
-  isInARMode.value = false;
-};
+// const handleExitAR = async () => {
+//   if (arSceneRef.value) {
+//     await arSceneRef.value.exitAR();
+//   }
+//   isInARMode.value = false;
+// };
 
-const handleFocusCamera = async () => {
-  // Try to trigger camera autofocus
-  try {
-    // Method 1: Try to access WebXR session directly
-    if (arSceneRef.value?.xrExperience?.baseExperience) {
-      const baseExperience = arSceneRef.value.xrExperience.baseExperience;
-      const session = (baseExperience as any).sessionManager?.currentSession || (baseExperience as any).session;
-      
-      if (session) {
-        // Try to trigger focus by requesting reference space
-        try {
-          await session.requestReferenceSpace('viewer');
-        } catch (e) {
-          // Ignore errors
-        }
-        
-        // Try to access camera track through WebXR
-        if ((session as any).inputSources) {
-          const inputSources = (session as any).inputSources as any[];
-          for (const inputSource of inputSources) {
-            if (inputSource && inputSource.track) {
-              const track = inputSource.track as MediaStreamTrack;
-              if (track.kind === 'video' && 'applyConstraints' in track) {
-                try {
-                  await (track as any).applyConstraints({
-                    advanced: [{ focusMode: 'continuous' }]
-                  } as any);
-                  console.log('Camera focus triggered via inputSource track');
-                  lastError.value = null;
-                  return;
-                } catch (e) {
-                  // Continue to fallback
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    // Method 2: Fallback - request camera access temporarily to trigger focus
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: 'environment'
-          } 
-        });
-        // Stop immediately - we just wanted to trigger focus
-        stream.getTracks().forEach(track => {
-          track.stop();
-        });
-        console.log('Camera focus triggered via getUserMedia');
-        lastError.value = null;
-      } catch (err: any) {
-        console.warn('Could not trigger camera focus:', err);
-        lastError.value = `Focus failed: ${err.message}`;
-      }
-    } else {
-      lastError.value = 'getUserMedia not available';
-    }
-  } catch (error: any) {
-    console.error('Error focusing camera:', error);
-    lastError.value = `Focus error: ${error.message}`;
-  }
+// Camera focus handler - unused for now, kept for debugging
+// const handleFocusCamera = async () => {
+//   // Try to trigger camera autofocus
+//   try {
+//     // Method 1: Try to access WebXR session directly
+//     if (arSceneRef.value?.xrExperience?.baseExperience) {
+//       const baseExperience = arSceneRef.value.xrExperience.baseExperience;
+//       const session = (baseExperience as any).sessionManager?.currentSession || (baseExperience as any).session;
+//       
+//       if (session) {
+//         // Try to trigger focus by requesting reference space
+//         try {
+//           await session.requestReferenceSpace('viewer');
+//         } catch (e) {
+//           // Ignore errors
+//         }
+//         
+//         // Try to access camera track through WebXR
+//         if ((session as any).inputSources) {
+//           const inputSources = (session as any).inputSources as any[];
+//           for (const inputSource of inputSources) {
+//             if (inputSource && inputSource.track) {
+//               const track = inputSource.track as MediaStreamTrack;
+//               if (track.kind === 'video' && 'applyConstraints' in track) {
+//                 try {
+//                   await (track as any).applyConstraints({
+//                     advanced: [{ focusMode: 'continuous' }]
+//                   } as any);
+//                   console.log('Camera focus triggered via inputSource track');
+//                   lastError.value = null;
+//                   return;
+//                 } catch (e) {
+//                   // Continue to fallback
+//                 }
+//               }
+//             }
+//           }
+//         }
+//       }
+//     }
+//     
+//     // Method 2: Fallback - request camera access temporarily to trigger focus
+//     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+//       try {
+//         const stream = await navigator.mediaDevices.getUserMedia({ 
+//           video: { 
+//             facingMode: 'environment'
+//           } 
+//         });
+//         // Stop immediately - we just wanted to trigger focus
+//         stream.getTracks().forEach(track => {
+//           track.stop();
+//         });
+//         console.log('Camera focus triggered via getUserMedia');
+//         lastError.value = null;
+//       } catch (err: any) {
+//         console.warn('Could not trigger camera focus:', err);
+//         lastError.value = `Focus failed: ${err.message}`;
+//       }
+//     } else {
+//       lastError.value = 'getUserMedia not available';
+//     }
+//   } catch (error: any) {
+//     console.error('Error focusing camera:', error);
+//     lastError.value = `Focus error: ${error.message}`;
+//   }
+// };
+
+const createPlayerAvatar = (userId: string): Mesh => {
+  if (!scene.value) throw new Error('Scene not available');
+  
+  // Create a distinctive avatar: sphere head + cone pointing forward
+  const avatarRoot = new Mesh(`player-${userId}`, scene.value as any);
+  
+  // Head (sphere)
+  const head = MeshBuilder.CreateSphere(`player-${userId}-head`, { diameter: 0.15 }, scene.value as any);
+  head.parent = avatarRoot;
+  head.position = new Vector3(0, 0.15, 0); // 15cm high
+  
+  const headMat = new StandardMaterial(`player-${userId}-head-mat`, scene.value as any);
+  headMat.diffuseColor = new Color3(1, 0.4, 0.8); // Pink/magenta
+  headMat.emissiveColor = new Color3(0.5, 0.2, 0.4);
+  head.material = headMat;
+  
+  // Direction cone (pointing forward in their view direction)
+  const dirCone = MeshBuilder.CreateCylinder(`player-${userId}-dir`, {
+    diameterTop: 0,
+    diameterBottom: 0.08,
+    height: 0.15,
+    tessellation: 8
+  }, scene.value as any);
+  dirCone.parent = avatarRoot;
+  dirCone.position = new Vector3(0, 0.15, 0.15); // In front of head
+  dirCone.rotation = new Vector3(Math.PI / 2, 0, 0); // Point forward
+  
+  const dirMat = new StandardMaterial(`player-${userId}-dir-mat`, scene.value as any);
+  dirMat.diffuseColor = new Color3(1, 1, 0); // Yellow
+  dirMat.emissiveColor = new Color3(0.5, 0.5, 0);
+  dirCone.material = dirMat;
+  
+  // Base marker (small cylinder at ground level)
+  const base = MeshBuilder.CreateCylinder(`player-${userId}-base`, {
+    diameter: 0.1,
+    height: 0.02,
+    tessellation: 12
+  }, scene.value as any);
+  base.parent = avatarRoot;
+  base.position = new Vector3(0, 0.01, 0);
+  
+  const baseMat = new StandardMaterial(`player-${userId}-base-mat`, scene.value as any);
+  baseMat.diffuseColor = new Color3(0.8, 0.8, 0.8);
+  baseMat.emissiveColor = new Color3(0.3, 0.3, 0.3);
+  base.material = baseMat;
+  
+  console.log(`✅ Created avatar for player ${userId}`);
+  return avatarRoot;
 };
 
 const setupNetworkHandlers = () => {
+  // Handle player pose updates
+  store.networkSync.onMessage('PLAYER_POSE', (message: any) => {
+    if (!scene.value || !imageTracking?.anchorNode.value) return;
+    
+    const userId = message.userId;
+    // Don't render our own avatar
+    if (userId === store.networkSync.userId) return;
+    
+    const worldPos = new Vector3(...message.position);
+    const worldRot = new Quaternion(...message.rotation);
+    
+    // Get or create avatar
+    let avatar = playerAvatars.value.get(userId);
+    if (!avatar) {
+      avatar = createPlayerAvatar(userId);
+      avatar.parent = imageTracking.anchorNode.value as any;
+      playerAvatars.value.set(userId, avatar);
+    }
+    
+    // Convert world position to anchor-relative
+    const localPos = imageTracking.getLocalPosition(worldPos);
+    avatar.position = localPos;
+    avatar.rotationQuaternion = worldRot;
+  });
+  
+  // Handle participant left - clean up their avatar
+  store.networkSync.onMessage('PARTICIPANT_LEFT', (message: any) => {
+    const userId = message.userId;
+    const avatar = playerAvatars.value.get(userId);
+    if (avatar) {
+      avatar.dispose();
+      playerAvatars.value.delete(userId);
+      console.log(`🗑️ Removed avatar for player ${userId}`);
+    }
+  });
+  
   // Handle object creation from network
   store.networkSync.onMessage('OBJECT_CREATE', (message: any) => {
     if (!scene.value || !imageTracking?.anchorNode.value) return;
@@ -383,34 +514,31 @@ watch(anchorFound, (found) => {
   }
 });
 
-// Watch debug info and update GUI
-watch(debugInfo, (info) => {
-  if (arUI) {
-    arUI.updateDebugInfo(info);
-  }
-}, { deep: true });
+// UI watchers disabled
+// watch(debugInfo, (info) => {
+//   if (arUI) {
+//     arUI.updateDebugInfo(info);
+//   }
+// }, { deep: true });
 
-// Watch store changes for UI updates
-watch(() => store.roomId, () => {
-  if (arUI) {
-    arUI.updateStatusBar(store.roomId || 'None', store.participantCount, anchorFound.value);
-  }
-});
+// watch(() => store.roomId, () => {
+//   if (arUI) {
+//     arUI.updateStatusBar(store.roomId || 'None', store.participantCount, anchorFound.value);
+//   }
+// });
 
-watch(() => store.participantCount, () => {
-  if (arUI) {
-    arUI.updateStatusBar(store.roomId || 'None', store.participantCount, anchorFound.value);
-  }
-});
+// watch(() => store.participantCount, () => {
+//   if (arUI) {
+//     arUI.updateStatusBar(store.roomId || 'None', store.participantCount, anchorFound.value);
+//   }
+// });
 
 // Debug mode: check URL parameter
-const urlParams = new URLSearchParams(window.location.search);
-const debugMode = urlParams.get('debug') === 'true';
-
-if (debugMode) {
-  console.log('Debug mode enabled');
-  // Add debug visualizations or logging
-}
+// const urlParams = new URLSearchParams(window.location.search);
+// const debugMode = urlParams.get('debug') === 'true';
+// if (debugMode) {
+//   console.log('Debug mode enabled');
+// }
 </script>
 
 <style>
