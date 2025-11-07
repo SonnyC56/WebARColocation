@@ -46,6 +46,20 @@
               </button>
             </div>
           </div>
+
+          <!-- Participants List -->
+          <div v-if="store.participantList.length > 0" class="participants-list">
+            <h3>Other Participants:</h3>
+            <div v-for="participant in store.participantList" :key="participant.userId" class="participant-item">
+              <span class="participant-name">
+                {{ participant.userName || participant.userId.substring(0, 8) }}
+                <span v-if="participant.isHost" class="host-badge">Host</span>
+              </span>
+              <button @click="sendHighFive(participant.userId)" class="btn-high-five" title="Send high five">
+                🙌
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="actions">
@@ -125,6 +139,20 @@ const copyRoomCode = async () => {
       console.error('Failed to copy room code:', err);
     }
   }
+};
+
+const sendHighFive = (toUserId: string) => {
+  store.networkSync.sendHighFive(toUserId);
+  
+  // Show local feedback
+  const toast = document.createElement('div');
+  toast.className = 'high-five-toast';
+  toast.textContent = '🙌 High five sent!';
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.remove();
+  }, 2000);
 };
 
 const emit = defineEmits<{
@@ -334,5 +362,93 @@ h1 {
   color: #c33;
   border-radius: 8px;
   border: 1px solid #fcc;
+}
+
+.participants-list {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.participants-list h3 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  color: #666;
+}
+
+.participant-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8f8f8;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.participant-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.host-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: #667eea;
+  color: white;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  font-weight: normal;
+}
+
+.btn-high-five {
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-high-five:hover {
+  transform: scale(1.2);
+}
+</style>
+
+<style>
+/* Global styles for high five toast */
+.high-five-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  z-index: 10000;
+  animation: slideIn 0.3s ease, slideOut 0.3s ease 1.7s forwards;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
 }
 </style>

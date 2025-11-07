@@ -7,6 +7,7 @@ import type {
   ObjectCreateMessage,
   ObjectUpdateMessage,
   AnchorFoundMessage,
+  HighFiveMessage,
   RoomCreatedResponse,
   RoomJoinedResponse,
   ErrorMessage,
@@ -296,6 +297,19 @@ export function useNetworkSync() {
     send(anchorMessage);
   };
 
+  const sendHighFive = (toUserId: string): void => {
+    if (!userId.value || !roomId.value) return;
+
+    const highFiveMessage: HighFiveMessage = {
+      type: 'HIGH_FIVE',
+      fromUserId: userId.value,
+      toUserId,
+    };
+
+    send(highFiveMessage);
+    console.log(`🙌 Sent high five to ${toUserId}`);
+  };
+
   const onMessage = (type: string, handler: (message: Message) => void): void => {
     messageHandlers.set(type, handler);
   };
@@ -363,6 +377,7 @@ export function useNetworkSync() {
     sendObjectCreate,
     sendObjectUpdate,
     sendAnchorFound,
+    sendHighFive,
     onMessage,
     offMessage,
     attemptReconnect,

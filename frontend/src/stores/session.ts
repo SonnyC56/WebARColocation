@@ -20,7 +20,11 @@ export const useSessionStore = defineStore('session', () => {
   const connectionStatus = ref<'disconnected' | 'connecting' | 'connected'>('disconnected');
 
   // Computed
-  const participantCount = computed(() => participants.value.size);
+  // Include yourself in the count (participants map doesn't include you, just others)
+  const participantCount = computed(() => {
+    // If connected, count is participants + yourself, otherwise 0
+    return connectionStatus.value === 'connected' ? participants.value.size + 1 : 0;
+  });
   const participantList = computed(() => Array.from(participants.value.values()));
 
   // Initialize network sync handlers

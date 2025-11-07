@@ -9,6 +9,7 @@ import {
   ObjectCreateMessage,
   ObjectUpdateMessage,
   AnchorFoundMessage,
+  HighFiveMessage,
   RoomCreatedResponse,
   RoomJoinedResponse,
   ErrorMessage,
@@ -80,6 +81,9 @@ export function handleMessage(ws: WebSocket, message: Message): void {
       break;
     case 'ANCHOR_FOUND':
       handleAnchorFound(ws, message);
+      break;
+    case 'HIGH_FIVE':
+      handleHighFive(ws, message);
       break;
     default:
       sendError(ws, `Unknown message type: ${(message as any).type}`);
@@ -197,6 +201,15 @@ function handleAnchorFound(ws: WebSocket, message: AnchorFoundMessage): void {
 
   // Broadcast anchor found event to sync with others
   broadcastToRoomExcept(room.roomId, ws, message);
+}
+
+function handleHighFive(ws: WebSocket, message: HighFiveMessage): void {
+  const room = sessionManager.getRoomForClient(ws);
+  if (!room) return;
+
+  // Broadcast high five to the target user (and room for simplicity)
+  broadcastToRoom(room.roomId, message);
+  console.log(`High five from ${message.fromUserId} to ${message.toUserId}`);
 }
 
 function handleDisconnect(ws: WebSocket): void {

@@ -91,6 +91,12 @@ export interface HostChangedMessage extends BaseMessage {
   newHostId: string;
 }
 
+export interface HighFiveMessage extends BaseMessage {
+  type: 'HIGH_FIVE';
+  fromUserId: string;
+  toUserId: string;
+}
+
 export type Message =
   | JoinRoomMessage
   | CreateRoomMessage
@@ -104,7 +110,8 @@ export type Message =
   | ErrorMessage
   | ParticipantJoinedMessage
   | ParticipantLeftMessage
-  | HostChangedMessage;
+  | HostChangedMessage
+  | HighFiveMessage;
 
 export interface VirtualObject {
   objectId: string;

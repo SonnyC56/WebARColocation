@@ -481,6 +481,24 @@ const setupNetworkHandlers = () => {
     }
   });
   
+  // Handle high five messages
+  store.networkSync.onMessage('HIGH_FIVE', (message: any) => {
+    // Only show if we're the recipient
+    if (message.toUserId === store.networkSync.userId.value) {
+      console.log(`🙌 Received high five from ${message.fromUserId}`);
+      
+      // Show toast notification
+      const toast = document.createElement('div');
+      toast.className = 'high-five-toast';
+      toast.textContent = '🙌 High five received!';
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 2000);
+    }
+  });
+  
   // Handle object creation from network
   store.networkSync.onMessage('OBJECT_CREATE', (message: any) => {
     if (!scene.value || !imageTracking?.anchorNode.value) return;
