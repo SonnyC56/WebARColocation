@@ -78,19 +78,25 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
       ref(arSceneRef.value.xrExperience) as any
     );
     
-    // Initialize QR tracking
-    imageTracking.initializeImageTracking('/qr-marker.png', 0.2).then((success) => {
+    // Initialize QR tracking with physical size
+    // IMPORTANT: Measure your printed QR code! The size must be accurate for correct 6DOF pose estimation
+    const qrPhysicalSize = 0.2; // 20cm - MEASURE YOUR ACTUAL QR CODE SIZE
+    console.log(`📏 Initializing QR tracking with physical size: ${qrPhysicalSize}m (${qrPhysicalSize * 100}cm)`);
+    console.log('📏 ⚠️ If objects appear at wrong distances, measure and update the QR code size!');
+    
+    imageTracking.initializeImageTracking('/qr-marker.png', qrPhysicalSize).then((success) => {
       trackingInitialized.value = success;
       if (success) {
-        console.log('Image tracking initialized');
+        console.log('✅ Image tracking initialized - WebXR will solve PnP to get full 6DOF pose');
         lastError.value = null;
       } else {
         lastError.value = 'Failed to initialize image tracking';
+        console.error('❌ Image tracking init failed');
       }
     }).catch((err: any) => {
       trackingInitialized.value = false;
       lastError.value = `Image tracking error: ${err.message}`;
-      console.error('Image tracking initialization error:', err);
+      console.error('❌ Image tracking initialization error:', err);
     });
     
     // Watch for anchor tracking state
@@ -113,21 +119,35 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
               }
               
               // Create a larger, more visible test cube attached to the anchor
-              const testCube = MeshBuilder.CreateBox('test-cube', { size: 0.2 }, scene.value as any);
+              const testCube = MeshBuilder.CreateBox('test-cube', { size: 0.15 }, scene.value as any);
               
               // Parent to anchor node so it appears relative to the QR code
               testCube.parent = imageTracking!.anchorNode.value as any;
               
-              // Position relative to anchor: 10cm above the QR code, centered
-              testCube.position = new Vector3(0, 0.1, 0);
+              // Position relative to anchor: 15cm above the QR code, centered
+              testCube.position = new Vector3(0, 0.15, 0);
               
               const material = new StandardMaterial('test-mat', scene.value as any);
               material.diffuseColor = new Color3(1, 0, 0); // Bright red
-              material.emissiveColor = new Color3(0.5, 0, 0); // Make it glow slightly
+              material.emissiveColor = new Color3(0.8, 0, 0); // Make it glow brightly
+              material.specularColor = new Color3(0, 0, 0); // No specular
               testCube.material = material;
               
-              console.log('Test cube created attached to anchor at position:', testCube.position);
-              console.log('Anchor node position:', imageTracking!.anchorNode.value!.position);
+              console.log('✅ Test cube created and parented to anchor');
+              console.log('   Cube local position:', testCube.position);
+              console.log('   Anchor world position:', imageTracking!.anchorNode.value!.position);
+              console.log('   Anchor world rotation:', imageTracking!.anchorNode.value!.rotationQuaternion);
+              console.log('   🎯 The cube should appear 15cm above the QR code');
+              
+              // Create a small sphere at anchor origin for reference
+              const anchorMarker = MeshBuilder.CreateSphere('anchor-marker', { diameter: 0.05 }, scene.value as any);
+              anchorMarker.parent = imageTracking!.anchorNode.value as any;
+              anchorMarker.position = Vector3.Zero();
+              const markerMat = new StandardMaterial('marker-mat', scene.value as any);
+              markerMat.diffuseColor = new Color3(0, 1, 0); // Green
+              markerMat.emissiveColor = new Color3(0, 0.8, 0);
+              anchorMarker.material = markerMat;
+              console.log('✅ Green anchor marker created at QR origin');
             } catch (err: any) {
               console.error('Failed to create test cube:', err);
               lastError.value = `Test cube error: ${err.message}`;

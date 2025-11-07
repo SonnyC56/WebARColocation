@@ -90,35 +90,48 @@ export function useImageTracking(scene: Ref<Scene | null>, xrExperience: any) {
   const handleImageFound = (event: any) => {
     if (!anchorNode.value || !scene.value) return;
 
+    console.log('🎯 QR CODE FOUND! Event:', event);
+    console.log('🎯 Event keys:', Object.keys(event));
+    
     isTracking.value = true;
     lastTrackingTime = Date.now();
     timeSinceLastTracking.value = 0;
     driftDetected.value = false;
 
-    // Get transform from tracked image
+    // Get transform from tracked image - WebXR does the PnP calculation internally
     const transform = event.transform || event.transformationMatrix;
+    console.log('🎯 Transform object:', transform);
+    console.log('🎯 Transform keys:', transform ? Object.keys(transform) : 'null');
+    
     if (transform) {
-      // Update anchor node position and rotation
+      // Update anchor node position and rotation (full 6DOF from PnP)
       let position: Vector3;
       let rotation: Quaternion;
       
       if (transform.getTranslation) {
         position = transform.getTranslation();
         rotation = transform.getRotationQuaternion();
+        console.log('🎯 Extracted via getTranslation()');
       } else if (transform instanceof Vector3) {
         position = transform;
         rotation = Quaternion.Identity();
+        console.log('🎯 Transform is Vector3');
       } else {
         // Extract from matrix
         position = transform.getTranslation ? transform.getTranslation() : Vector3.Zero();
         rotation = transform.getRotationQuaternion ? transform.getRotationQuaternion() : Quaternion.Identity();
+        console.log('🎯 Extracted from matrix');
       }
+
+      console.log(`🎯 ANCHOR POSE (6DOF from PnP):`);
+      console.log(`   Position: x=${position.x.toFixed(3)}, y=${position.y.toFixed(3)}, z=${position.z.toFixed(3)}`);
+      console.log(`   Rotation: x=${rotation.x.toFixed(3)}, y=${rotation.y.toFixed(3)}, z=${rotation.z.toFixed(3)}, w=${rotation.w.toFixed(3)}`);
 
       // Check for drift if we have previous position
       if (lastKnownPosition.value) {
         const positionDelta = Vector3.Distance(position, lastKnownPosition.value);
         if (positionDelta > DRIFT_THRESHOLD) {
-          console.warn(`Potential drift detected: ${positionDelta.toFixed(3)}m`);
+          console.warn(`⚠️ Potential drift detected: ${positionDelta.toFixed(3)}m`);
           driftDetected.value = true;
         }
       }
@@ -134,6 +147,10 @@ export function useImageTracking(scene: Ref<Scene | null>, xrExperience: any) {
       if (positionHistory.length > MAX_HISTORY_SIZE) {
         positionHistory.shift();
       }
+      
+      console.log('🎯 Anchor node updated. Children objects will now be positioned relative to QR code.');
+    } else {
+      console.error('❌ No transform data in tracking event!');
     }
   };
 
