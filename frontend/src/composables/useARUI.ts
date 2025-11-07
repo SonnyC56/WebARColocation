@@ -6,6 +6,7 @@ export interface DebugInfo {
   webxrSupported: boolean;
   arActive: boolean;
   trackingInitialized: boolean;
+  anchorFound: boolean;
   networkConnected: boolean;
   roomId: string | null;
   objectCount: number;
@@ -30,13 +31,16 @@ export function useARUI(scene: Ref<Scene | null>) {
     }
 
     try {
-      // Create fullscreen UI texture
+      // Create fullscreen UI texture with proper scaling
       advancedTexture.value = AdvancedDynamicTexture.CreateFullscreenUI('ARUI', true, scene.value);
+      // Set ideal width for proper scaling on mobile (use a reasonable base width)
+      advancedTexture.value.idealWidth = 1920;
+      advancedTexture.value.idealHeight = 1080;
       
       // Create debug panel (top left)
       createDebugPanel();
       
-      // Create status bar (top center)
+      // Create status bar (top right)
       createStatusBar();
       
       // Create center instruction
@@ -56,22 +60,22 @@ export function useARUI(scene: Ref<Scene | null>) {
     if (!advancedTexture.value) return;
 
     const panel = new Rectangle('debugPanel');
-    panel.width = '240px';
+    panel.width = '300px';
     panel.height = 'auto';
-    panel.cornerRadius = 6;
-    panel.color = 'rgba(255,255,255,0.1)';
-    panel.thickness = 1;
-    panel.background = 'rgba(0,0,0,0.75)';
-    panel.alpha = 0.95;
+    panel.cornerRadius = 8;
+    panel.color = 'rgba(255,255,255,0.2)';
+    panel.thickness = 2;
+    panel.background = 'rgba(0,0,0,0.8)';
+    panel.alpha = 0.9;
     panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    panel.left = '8px';
-    panel.top = '8px';
+    panel.left = '20px';
+    panel.top = '20px';
     panel.adaptHeightToChildren = true;
-    panel.paddingTop = '6px';
-    panel.paddingBottom = '6px';
-    panel.paddingLeft = '8px';
-    panel.paddingRight = '8px';
+    panel.paddingTop = '10px';
+    panel.paddingBottom = '10px';
+    panel.paddingLeft = '12px';
+    panel.paddingRight = '12px';
     advancedTexture.value.addControl(panel);
     debugPanel.value = panel;
 
@@ -86,18 +90,18 @@ export function useARUI(scene: Ref<Scene | null>) {
 
     const headerText = new TextBlock('debugHeaderText', 'DEBUG');
     headerText.color = 'white';
-    headerText.fontSize = 11;
+    headerText.fontSize = 18;
     headerText.fontWeight = 'bold';
     headerText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
     header.addControl(headerText);
 
     const toggleBtn = Button.CreateSimpleButton('debugToggle', '▼');
-    toggleBtn.width = '24px';
-    toggleBtn.height = '20px';
+    toggleBtn.width = '40px';
+    toggleBtn.height = '30px';
     toggleBtn.color = 'white';
-    toggleBtn.fontSize = 10;
-    toggleBtn.background = 'rgba(255,255,255,0.15)';
-    toggleBtn.cornerRadius = 3;
+    toggleBtn.fontSize = 16;
+    toggleBtn.background = 'rgba(255,255,255,0.2)';
+    toggleBtn.cornerRadius = 4;
     toggleBtn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
     toggleBtn.onPointerClickObservable.add(() => {
       showDebug.value = !showDebug.value;
@@ -121,20 +125,20 @@ export function useARUI(scene: Ref<Scene | null>) {
     if (!advancedTexture.value) return;
 
     const bar = new Rectangle('statusBar');
-    bar.width = '200px';
+    bar.width = '280px';
     bar.height = 'auto';
-    bar.cornerRadius = 6;
-    bar.color = 'rgba(255,255,255,0.1)';
-    bar.thickness = 1;
-    bar.background = 'rgba(0,0,0,0.75)';
-    bar.alpha = 0.95;
+    bar.cornerRadius = 8;
+    bar.color = 'rgba(255,255,255,0.2)';
+    bar.thickness = 2;
+    bar.background = 'rgba(0,0,0,0.8)';
+    bar.alpha = 0.9;
     bar.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
     bar.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    bar.left = '-208px'; // Negative left for right alignment (width + padding + margin)
-    bar.top = '8px';
+    bar.left = '-300px'; // Negative left for right alignment
+    bar.top = '20px';
     bar.adaptHeightToChildren = true;
-    bar.paddingTop = '8px';
-    bar.paddingBottom = '8px';
+    bar.paddingTop = '10px';
+    bar.paddingBottom = '10px';
     bar.paddingLeft = '12px';
     bar.paddingRight = '12px';
     advancedTexture.value.addControl(bar);
@@ -171,19 +175,19 @@ export function useARUI(scene: Ref<Scene | null>) {
     panel.width = '0px'; // Will adapt to children
     panel.height = 'auto';
     panel.cornerRadius = 8;
-    panel.color = 'rgba(255,255,255,0.1)';
-    panel.thickness = 1;
-    panel.background = 'rgba(0,0,0,0.75)';
-    panel.alpha = 0.95;
+    panel.color = 'rgba(255,255,255,0.2)';
+    panel.thickness = 2;
+    panel.background = 'rgba(0,0,0,0.8)';
+    panel.alpha = 0.9;
     panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-    panel.top = '-100px'; // Negative top for bottom alignment (will adapt to content)
+    panel.top = '-120px'; // Negative top for bottom alignment
     panel.adaptWidthToChildren = true;
     panel.adaptHeightToChildren = true;
-    panel.paddingTop = '12px';
-    panel.paddingBottom = '12px';
-    panel.paddingLeft = '16px';
-    panel.paddingRight = '16px';
+    panel.paddingTop = '16px';
+    panel.paddingBottom = '16px';
+    panel.paddingLeft = '20px';
+    panel.paddingRight = '20px';
     advancedTexture.value.addControl(panel);
     controlsPanel.value = panel;
   };
@@ -225,34 +229,37 @@ export function useARUI(scene: Ref<Scene | null>) {
     const createDebugLine = (label: string, value: string, color: string = 'white') => {
       const line = new Rectangle(`debugLine_${label}`);
       line.width = '100%';
-      line.height = '18px';
+      line.height = '32px';
       line.background = 'transparent';
       line.thickness = 0;
       line.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-      line.paddingBottom = '2px';
+      line.paddingBottom = '4px';
       content.addControl(line);
 
       const labelText = new TextBlock(`debugLabel_${label}`, label + ':');
-      labelText.color = 'rgba(255,255,255,0.7)';
-      labelText.fontSize = 10;
+      labelText.color = 'rgba(255,255,255,0.8)';
+      labelText.fontSize = 16;
       labelText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
       labelText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-      labelText.width = '100px';
+      labelText.width = '140px';
+      labelText.height = '32px';
       line.addControl(labelText);
 
       const valueText = new TextBlock(`debugValue_${label}`, value);
       valueText.color = color;
-      valueText.fontSize = 10;
+      valueText.fontSize = 16;
       valueText.fontWeight = '600';
       valueText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
       valueText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-      valueText.width = '120px';
+      valueText.width = '140px';
+      valueText.height = '32px';
       line.addControl(valueText);
     };
 
     createDebugLine('WebXR', info.webxrSupported ? 'Supported' : 'Not Supported', info.webxrSupported ? '#4ade80' : '#f87171');
     createDebugLine('AR Session', info.arActive ? 'Active' : 'Inactive', info.arActive ? '#4ade80' : '#fbbf24');
     createDebugLine('Image Tracking', info.trackingInitialized ? 'Init' : 'Not Init', info.trackingInitialized ? '#4ade80' : '#fbbf24');
+    createDebugLine('QR Anchor', info.anchorFound ? 'Found' : 'Not Found', info.anchorFound ? '#4ade80' : '#fbbf24');
     createDebugLine('Network', info.networkConnected ? 'Connected' : 'Disconnected', info.networkConnected ? '#4ade80' : '#f87171');
     createDebugLine('Room', info.roomId || 'None', 'white');
     createDebugLine('Objects', info.objectCount.toString(), 'white');
@@ -273,27 +280,29 @@ export function useARUI(scene: Ref<Scene | null>) {
     const createStatusItem = (label: string, value: string, color: string = 'white') => {
       const item = new Rectangle(`statusItem_${label}`);
       item.width = '100%';
-      item.height = 'auto';
+      item.height = '40px';
       item.background = 'transparent';
       item.thickness = 0;
-      item.adaptHeightToChildren = true;
       item.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-      item.paddingBottom = '4px';
+      item.paddingBottom = '6px';
       statusBar.value!.addControl(item);
 
       const labelText = new TextBlock(`statusLabel_${label}`, label.toUpperCase());
-      labelText.color = 'rgba(255,255,255,0.7)';
-      labelText.fontSize = 9;
+      labelText.color = 'rgba(255,255,255,0.8)';
+      labelText.fontSize = 14;
       labelText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
       labelText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+      labelText.height = '20px';
       item.addControl(labelText);
 
       const valueText = new TextBlock(`statusValue_${label}`, value);
       valueText.color = color;
-      valueText.fontSize = 12;
+      valueText.fontSize = 18;
       valueText.fontWeight = '600';
       valueText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-      valueText.top = '12px';
+      valueText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+      valueText.top = '20px';
+      valueText.height = '20px';
       item.addControl(valueText);
     };
 
@@ -315,33 +324,34 @@ export function useARUI(scene: Ref<Scene | null>) {
 
       const title = new TextBlock('instructionTitle', 'Scan QR Code');
       title.color = 'white';
-      title.fontSize = 20;
+      title.fontSize = 32;
       title.fontWeight = 'bold';
       title.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-      title.paddingBottom = '8px';
+      title.paddingBottom = '12px';
       centerInstruction.value.addControl(title);
 
       const desc = new TextBlock('instructionDesc', message || 'Point your device at the QR marker to anchor the AR experience');
-      desc.color = 'rgba(255,255,255,0.85)';
-      desc.fontSize = 14;
+      desc.color = 'rgba(255,255,255,0.9)';
+      desc.fontSize = 20;
       desc.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      desc.textWrapping = true;
       centerInstruction.value.addControl(desc);
     }
   };
 
   const createButton = (name: string, text: string, onClick: () => void, color: string = '#667eea', enabled: boolean = true): Button => {
     const button = Button.CreateSimpleButton(name, text);
-    button.width = '100px';
-    button.height = '44px';
+    button.width = '120px';
+    button.height = '60px';
     button.color = 'white';
-    button.fontSize = 13;
+    button.fontSize = 18;
     button.fontWeight = '600';
     button.background = color;
-    button.cornerRadius = 6;
+    button.cornerRadius = 8;
     button.alpha = enabled ? 1 : 0.5;
     button.isEnabled = enabled;
-    button.paddingLeft = '8px';
-    button.paddingRight = '8px';
+    button.paddingLeft = '12px';
+    button.paddingRight = '12px';
     button.thickness = 0;
     button.onPointerClickObservable.add(() => {
       if (enabled) {

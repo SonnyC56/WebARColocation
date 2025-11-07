@@ -44,6 +44,7 @@ const debugInfo = computed<DebugInfo>(() => ({
   webxrSupported: arSceneRef.value?.isSupported || false,
   arActive: isInARMode.value && (arSceneRef.value?.isInAR || false),
   trackingInitialized: trackingInitialized.value,
+  anchorFound: anchorFound.value,
   networkConnected: store.networkSync.connected,
   roomId: store.roomId,
   objectCount: placedObjects.value.size,
@@ -142,19 +143,22 @@ const handleAREntered = () => {
     arUI.updateDebugInfo(debugInfo.value);
   }
   
-  // Add a test cube to verify 3D rendering works
+  // Add a test cube to verify 3D rendering works (in world space, not anchor-relative)
   if (scene.value) {
     setTimeout(() => {
       if (scene.value) {
         try {
-          const testCube = MeshBuilder.CreateBox('test-cube', { size: 0.2 }, scene.value as any);
-          testCube.position = new Vector3(0, 0.5, -1); // 1 meter in front, 0.5m up
+          // Create a larger, more visible test cube
+          const testCube = MeshBuilder.CreateBox('test-cube', { size: 0.3 }, scene.value as any);
+          testCube.position = new Vector3(0, 1.5, -2); // 2 meters in front, 1.5m up (eye level)
           
           const material = new StandardMaterial('test-mat', scene.value as any);
-          material.diffuseColor = new Color3(1, 0, 0); // Red
+          material.diffuseColor = new Color3(1, 0, 0); // Bright red
+          material.emissiveColor = new Color3(0.5, 0, 0); // Make it glow slightly
           testCube.material = material;
           
-          console.log('Test cube created at position:', testCube.position);
+          console.log('Test cube created at world position:', testCube.position);
+          console.log('Test cube should be visible in AR view');
         } catch (err: any) {
           console.error('Failed to create test cube:', err);
           lastError.value = `Test cube error: ${err.message}`;
