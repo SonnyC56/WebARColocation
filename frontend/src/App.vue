@@ -105,12 +105,13 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
       const wasFound = anchorFound.value;
       anchorFound.value = tracking || false;
       
-              // Trigger flash when anchor is first found (UI disabled for now)
-              // if (anchorFound.value && !wasFound && arUI) {
-              //   arUI.triggerFlash();
-              // }
+              // Stop periodic focus attempts once anchor is found
+      if (anchorFound.value && !wasFound) {
+        stopPeriodicFocus();
+        console.log('🎯 Anchor found! Stopping focus attempts.');
+      }
                 
-              if (anchorFound.value && !wasFound) {
+      if (anchorFound.value && !wasFound) {
                 // Create orientation marker when anchor is first found (attached to anchor)
                 if (scene.value && imageTracking?.anchorNode.value) {
                   setTimeout(() => {
@@ -237,6 +238,12 @@ const handleAREntered = () => {
   console.log('AR entered');
   lastError.value = null;
   
+  // Trigger camera autofocus for better QR detection
+  triggerCameraFocus();
+  
+  // Set up periodic focus attempts (helps with Pixel/Android devices)
+  startPeriodicFocus();
+  
   // UI disabled
   // Test object (cube + cone) will be created when anchor is found (see watch handler above)
 };
@@ -245,6 +252,7 @@ const handleARExited = () => {
   console.log('AR exited');
   isInARMode.value = false;
   stopPlayerPoseUpdates();
+  stopPeriodicFocus();
   
   // Clean up all player avatars
   playerAvatars.value.forEach((avatar) => {
@@ -289,7 +297,110 @@ const handleARExited = () => {
 //   isInARMode.value = false;
 // };
 
-// Camera focus handler - unused for now, kept for debugging
+// Camera autofocus handling for WebXR (especially important for Pixel/Android)
+let focusInterval: number | null = null;
+
+const triggerCameraFocus = async () => {
+  console.log('🎥 Attempting to trigger camera autofocus...');
+  
+  try {
+    // Method 1: Try to access WebXR camera tracks directly
+    if (arSceneRef.value?.xrExperience?.baseExperience) {
+      const xr = arSceneRef.value.xrExperience;
+      const session = xr.baseExperience.sessionManager?.session;
+      
+      if (session) {
+        console.log('🎥 Found WebXR session, attempting to configure camera...');
+        
+        // Try to get camera rendering context
+        const glLayer = session.renderState.baseLayer;
+        if (glLayer) {
+          console.log('🎥 WebXR render layer found');
+        }
+        
+        // Request viewer reference space to ensure camera is initialized
+        try {
+          await session.requestReferenceSpace('viewer');
+          console.log('🎥 Viewer reference space requested');
+        } catch (e) {
+          console.log('🎥 Could not request viewer space:', e);
+        }
+      }
+    }
+    
+    // Method 2: Direct getUserMedia with autofocus constraints
+    // This is a fallback that can sometimes help "wake up" the camera
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        console.log('🎥 Attempting getUserMedia with autofocus constraints...');
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            focusMode: 'continuous',
+            // @ts-ignore - these are valid constraints but TypeScript doesn't know them
+            advanced: [
+              { focusMode: 'continuous' },
+              { focusMode: 'auto' }
+            ]
+          } as any
+        });
+        
+        // Apply constraints to the track
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+          const capabilities = videoTrack.getCapabilities();
+          console.log('🎥 Camera capabilities:', capabilities);
+          
+          try {
+            await videoTrack.applyConstraints({
+              // @ts-ignore
+              advanced: [{ focusMode: 'continuous' }]
+            });
+            console.log('✅ Applied continuous autofocus');
+          } catch (e) {
+            console.log('🎥 Could not apply focus constraints:', e);
+          }
+        }
+        
+        // Stop the temporary stream
+        stream.getTracks().forEach(track => track.stop());
+        console.log('🎥 Autofocus trigger complete');
+      } catch (err: any) {
+        console.log('🎥 getUserMedia autofocus failed:', err.message);
+      }
+    }
+  } catch (error: any) {
+    console.log('🎥 Camera focus error:', error.message);
+  }
+};
+
+const startPeriodicFocus = () => {
+  if (focusInterval) return;
+  
+  // Retry focus every 3 seconds until anchor is found
+  // This helps with devices that lose focus or need multiple attempts
+  focusInterval = window.setInterval(() => {
+    if (!anchorFound.value) {
+      console.log('🎥 Periodic focus attempt (anchor not found yet)...');
+      triggerCameraFocus();
+    } else {
+      // Stop trying once we've found the anchor
+      stopPeriodicFocus();
+    }
+  }, 3000);
+  
+  console.log('🎥 Started periodic autofocus (every 3s until anchor found)');
+};
+
+const stopPeriodicFocus = () => {
+  if (focusInterval) {
+    clearInterval(focusInterval);
+    focusInterval = null;
+    console.log('🎥 Stopped periodic autofocus');
+  }
+};
+
+// Manual focus trigger (kept for debugging)
 // const handleFocusCamera = async () => {
 //   // Try to trigger camera autofocus
 //   try {
