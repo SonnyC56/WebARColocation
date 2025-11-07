@@ -22,6 +22,10 @@ export function useARUI(scene: Ref<Scene | null>) {
   const statusBar = ref<Rectangle | null>(null);
   const centerInstruction = ref<Rectangle | null>(null);
   const controlsPanel = ref<Rectangle | null>(null);
+  const flashOverlay = ref<Rectangle | null>(null);
+  
+  // Audio context for sound
+  let audioContext: AudioContext | null = null;
 
   // Initialize GUI
   const initializeGUI = (): boolean => {
@@ -48,6 +52,12 @@ export function useARUI(scene: Ref<Scene | null>) {
       
       // Create controls panel (bottom)
       createControlsPanel();
+      
+      // Create flash overlay (hidden by default)
+      createFlashOverlay();
+      
+      // Initialize audio context for sound
+      initAudio();
       
       return true;
     } catch (error) {
@@ -383,6 +393,104 @@ export function useARUI(scene: Ref<Scene | null>) {
     controlsPanel.value.addControl(exitBtn);
   };
 
+  const createFlashOverlay = () => {
+    if (!advancedTexture.value) return;
+
+    const overlay = new Rectangle('flashOverlay');
+    overlay.width = '100%';
+    overlay.height = '100%';
+    overlay.background = 'white';
+    overlay.alpha = 0;
+    overlay.thickness = 0;
+    overlay.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    overlay.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    overlay.isPointerBlocker = false;
+    overlay.zIndex = 1000; // On top of everything
+    overlay.isVisible = true;
+    advancedTexture.value.addControl(overlay);
+    flashOverlay.value = overlay;
+  };
+
+  const initAudio = () => {
+    try {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    } catch (error) {
+      console.warn('Audio context not available:', error);
+    }
+  };
+
+  const playSuccessSound = () => {
+    if (!audioContext) {
+      initAudio();
+      if (!audioContext) return;
+    }
+
+    try {
+      // Create a pleasant success sound (two-tone chime)
+      const oscillator1 = audioContext.createOscillator();
+      const oscillator2 = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator1.type = 'sine';
+      oscillator1.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+      
+      oscillator2.type = 'sine';
+      oscillator2.frequency.setValueAtTime(659.25, audioContext.currentTime); // E5
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+      oscillator1.connect(gainNode);
+      oscillator2.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator1.start();
+      oscillator2.start();
+      oscillator1.stop(audioContext.currentTime + 0.3);
+      oscillator2.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      console.warn('Could not play sound:', error);
+    }
+  };
+
+  const triggerFlash = () => {
+    if (!flashOverlay.value || !advancedTexture.value || !scene.value) return;
+
+    playSuccessSound();
+
+    // Flash animation: fade in quickly, then fade out smoothly
+    const flash = flashOverlay.value;
+    flash.alpha = 0;
+    
+    // Use requestAnimationFrame for smooth animation
+    let startTime: number | null = null;
+    const duration = 300; // Total animation duration in ms
+    
+    const animate = (timestamp: number) => {
+      if (startTime === null) {
+        startTime = timestamp;
+      }
+      
+      const elapsed = timestamp - startTime;
+      const progress = elapsed / duration;
+      
+      if (progress < 0.3) {
+        // Fade in (first 30% of duration)
+        flash.alpha = (progress / 0.3) * 0.8;
+        requestAnimationFrame(animate);
+      } else if (progress < 1.0) {
+        // Fade out (remaining 70% of duration)
+        flash.alpha = 0.8 * (1 - (progress - 0.3) / 0.7);
+        requestAnimationFrame(animate);
+      } else {
+        // Animation complete
+        flash.alpha = 0;
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  };
+
   const dispose = () => {
     if (advancedTexture.value) {
       advancedTexture.value.dispose();
@@ -392,6 +500,11 @@ export function useARUI(scene: Ref<Scene | null>) {
     statusBar.value = null;
     centerInstruction.value = null;
     controlsPanel.value = null;
+    flashOverlay.value = null;
+    if (audioContext) {
+      audioContext.close();
+      audioContext = null;
+    }
   };
 
   return {
@@ -400,6 +513,7 @@ export function useARUI(scene: Ref<Scene | null>) {
     updateStatusBar,
     showCenterInstruction,
     updateControls,
+    triggerFlash,
     dispose,
   };
 }

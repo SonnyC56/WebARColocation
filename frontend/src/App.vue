@@ -95,7 +95,13 @@ const handleEngineReady = (eng: Engine, scn: Scene) => {
     
     // Watch for anchor tracking state
     watch(() => imageTracking?.isTracking.value, (tracking) => {
+      const wasFound = anchorFound.value;
       anchorFound.value = tracking || false;
+      
+      // Trigger flash and sound when anchor is first found
+      if (anchorFound.value && !wasFound && arUI) {
+        arUI.triggerFlash();
+      }
       
       // Update UI
       if (arUI) {
