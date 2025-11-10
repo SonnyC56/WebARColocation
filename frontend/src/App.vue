@@ -4,7 +4,7 @@
     <SessionUI v-if="!isInARMode" @start-ar="handleStartAR" />
     
     <!-- AR Scene (always mounted, shown when in AR mode) -->
-    <div :class="{ 'ar-container': isInARMode, 'ar-hidden': !isInARMode }">
+    <div v-show="isInARMode" class="ar-container">
       <ARScene
         ref="arSceneRef"
         @session-ready="handleSessionReady"
@@ -380,10 +380,13 @@ watch(anchorFound, (found) => {
 }
 
 .ar-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  z-index: 1;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: #000;
 }
 
 .ar-hidden {
@@ -394,6 +397,7 @@ watch(anchorFound, (found) => {
   height: 1px;
   overflow: hidden;
   pointer-events: none;
+  opacity: 0;
 }
 
 /* High five toast styles */

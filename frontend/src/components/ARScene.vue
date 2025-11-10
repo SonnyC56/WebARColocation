@@ -135,6 +135,7 @@ defineExpose({
   position: relative;
   overflow: hidden;
   z-index: 1;
+  background: #000;
 }
 
 .ar-canvas {
@@ -142,7 +143,10 @@ defineExpose({
   height: 100%;
   display: block;
   touch-action: none;
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  object-fit: cover;
   z-index: 1;
 }
 </style>
