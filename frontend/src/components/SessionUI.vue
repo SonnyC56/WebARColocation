@@ -314,8 +314,9 @@ h1 {
 .room-code-display label {
   display: block;
   margin-bottom: 8px;
-  color: #666;
+  color: #000;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .code-container {

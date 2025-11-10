@@ -484,7 +484,7 @@ const setupNetworkHandlers = () => {
   // Handle high five messages
   store.networkSync.onMessage('HIGH_FIVE', (message: any) => {
     // Only show if we're the recipient
-    if (message.toUserId === store.networkSync.userId.value) {
+    if (message.toUserId === store.networkSync.userId) {
       console.log(`🙌 Received high five from ${message.fromUserId}`);
       
       // Show toast notification
