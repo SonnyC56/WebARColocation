@@ -125,6 +125,24 @@ export function useNetworkSync() {
 
   const disconnect = () => {
     if (ws.value) {
+      // Send a leave message before closing if we're in a room
+      if (roomId.value && userId.value) {
+        try {
+          // Try to send leave message (may fail if already disconnected)
+          const leaveMessage = {
+            type: 'LEAVE_ROOM',
+            userId: userId.value,
+            roomId: roomId.value,
+            timestamp: Date.now(),
+          };
+          if (ws.value.readyState === WebSocket.OPEN) {
+            ws.value.send(JSON.stringify(leaveMessage));
+          }
+        } catch (e) {
+          // Ignore errors - connection may already be closed
+        }
+      }
+      
       ws.value.close();
       ws.value = null;
     }
@@ -360,6 +378,26 @@ export function useNetworkSync() {
       clearTimeout(reconnectTimeout);
     }
   });
+
+  // Handle page unload/close - ensure cleanup happens
+  if (typeof window !== 'undefined') {
+    // Use beforeunload to ensure cleanup happens before page closes
+    window.addEventListener('beforeunload', () => {
+      disconnect();
+    });
+    
+    // Also handle visibility change (tab switch, minimize)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && connected.value) {
+        // Keep connection alive but could add ping/pong here if needed
+      }
+    });
+    
+    // Handle page unload as backup
+    window.addEventListener('unload', () => {
+      disconnect();
+    });
+  }
 
   return {
     ws,

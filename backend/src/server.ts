@@ -21,6 +21,13 @@ import {
   Participant,
 } from './types';
 
+interface LeaveRoomMessage {
+  type: 'LEAVE_ROOM';
+  userId: string;
+  roomId: string;
+  timestamp?: number;
+}
+
 const PORT = process.env.PORT || 8080;
 const app = express();
 
@@ -62,28 +69,31 @@ wss.on('connection', (ws: WebSocket) => {
   });
 });
 
-export function handleMessage(ws: WebSocket, message: Message): void {
+export function handleMessage(ws: WebSocket, message: Message | LeaveRoomMessage): void {
   switch (message.type) {
     case 'CREATE_ROOM':
-      handleCreateRoom(ws, message);
+      handleCreateRoom(ws, message as CreateRoomMessage);
       break;
     case 'JOIN_ROOM':
-      handleJoinRoom(ws, message);
+      handleJoinRoom(ws, message as JoinRoomMessage);
+      break;
+    case 'LEAVE_ROOM':
+      handleLeaveRoom(ws, message as LeaveRoomMessage);
       break;
     case 'PLAYER_POSE':
-      handlePlayerPose(ws, message);
+      handlePlayerPose(ws, message as PlayerPoseMessage);
       break;
     case 'OBJECT_CREATE':
-      handleObjectCreate(ws, message);
+      handleObjectCreate(ws, message as ObjectCreateMessage);
       break;
     case 'OBJECT_UPDATE':
-      handleObjectUpdate(ws, message);
+      handleObjectUpdate(ws, message as ObjectUpdateMessage);
       break;
     case 'ANCHOR_FOUND':
-      handleAnchorFound(ws, message);
+      handleAnchorFound(ws, message as AnchorFoundMessage);
       break;
     case 'HIGH_FIVE':
-      handleHighFive(ws, message);
+      handleHighFive(ws, message as HighFiveMessage);
       break;
     default:
       sendError(ws, `Unknown message type: ${(message as any).type}`);
@@ -210,6 +220,12 @@ function handleHighFive(ws: WebSocket, message: HighFiveMessage): void {
   // Broadcast high five to the target user (and room for simplicity)
   broadcastToRoom(room.roomId, message);
   console.log(`High five from ${message.fromUserId} to ${message.toUserId}`);
+}
+
+function handleLeaveRoom(ws: WebSocket, message: LeaveRoomMessage): void {
+  // Explicit leave room request - same as disconnect but graceful
+  handleDisconnect(ws);
+  console.log(`User ${message.userId} explicitly left room ${message.roomId}`);
 }
 
 function handleDisconnect(ws: WebSocket): void {
