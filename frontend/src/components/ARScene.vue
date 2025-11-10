@@ -6,11 +6,24 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
-import { useWebXR } from '../composables/useWebXR';
-import type { Engine, Scene } from '@babylonjs/core';
+import { useCameraKit } from '../composables/useCameraKit';
+import type { CameraKitSession } from '@snap/camera-kit';
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
-const { engine, scene, xrExperience, isInAR, isSupported, checkSupport, initializeEngine, enterAR, exitAR, dispose } = useWebXR();
+const { 
+  cameraKit, 
+  session, 
+  isActive, 
+  isSupported, 
+  initialize, 
+  createSession, 
+  setCameraSource,
+  loadAndApplyLens,
+  play,
+  pause,
+  removeLens,
+  dispose 
+} = useCameraKit();
 
 defineProps<{
   autoStart?: boolean;
@@ -19,26 +32,54 @@ defineProps<{
 const emit = defineEmits<{
   'ar-entered': [];
   'ar-exited': [];
-  'engine-ready': [engine: Engine, scene: Scene];
+  'session-ready': [session: CameraKitSession];
 }>();
 
 onMounted(async () => {
   if (!canvasRef.value) return;
 
-  // Check WebXR support
-  const supported = await checkSupport();
-  if (!supported) {
-    console.warn('WebXR immersive-ar not supported on this device');
+  // Initialize Camera Kit
+  const initialized = await initialize();
+  if (!initialized) {
+    console.warn('Camera Kit initialization failed');
+    return;
   }
 
-  // Initialize engine
-  const initialized = await initializeEngine(canvasRef.value);
-  if (initialized && engine.value && scene.value) {
-    emit('engine-ready', engine.value as Engine, scene.value as Scene);
+  // Create session with canvas
+  const newSession = await createSession(canvasRef.value);
+  if (!newSession) {
+    console.error('Failed to create Camera Kit session');
+    return;
+  }
+
+  // Set camera source
+  const sourceSet = await setCameraSource(newSession);
+  if (!sourceSet) {
+    console.error('Failed to set camera source');
+    return;
+  }
+
+  // Load and apply Lens (Lens IDs from environment)
+  const lensId = import.meta.env.VITE_LENS_ID;
+  const lensGroupId = import.meta.env.VITE_LENS_GROUP_ID;
+  
+  if (lensId && lensGroupId && lensId !== 'your_lens_id_here') {
+    const lensApplied = await loadAndApplyLens(newSession as any, lensId, lensGroupId);
+    if (lensApplied) {
+      // Start rendering
+      await play(newSession as any);
+      emit('session-ready', newSession as any);
+    } else {
+      console.error('Failed to load/apply Lens');
+    }
+  } else {
+    console.warn('Lens ID or Lens Group ID not configured. Set VITE_LENS_ID and VITE_LENS_GROUP_ID in .env');
+    // Still emit session-ready so app can work without Lens initially
+    emit('session-ready', newSession as any);
   }
 });
 
-watch(isInAR, (newValue) => {
+watch(isActive, (newValue) => {
   if (newValue) {
     emit('ar-entered');
   } else {
@@ -51,15 +92,39 @@ onUnmounted(() => {
 });
 
 // Expose methods for parent components
+const enterAR = async (): Promise<boolean> => {
+  if (!session.value) {
+    console.error('Camera Kit session not initialized');
+    return false;
+  }
+  
+  try {
+    await play(session.value as any);
+    return true;
+  } catch (error) {
+    console.error('Failed to enter AR:', error);
+    return false;
+  }
+};
+
+const exitAR = async (): Promise<void> => {
+  if (session.value) {
+    try {
+      await pause(session.value as any);
+      await removeLens(session.value as any);
+    } catch (error) {
+      console.error('Failed to exit AR:', error);
+    }
+  }
+};
+
 defineExpose({
   enterAR,
   exitAR,
   isSupported,
-  isInAR,
-  engine,
-  scene,
-  xrExperience,
-  checkSupport,
+  isActive,
+  session,
+  cameraKit,
 });
 </script>
 
@@ -69,7 +134,7 @@ defineExpose({
   height: 100%;
   position: relative;
   overflow: hidden;
-  z-index: 1; /* Lower than overlay */
+  z-index: 1;
 }
 
 .ar-canvas {

@@ -44,3 +44,5 @@ temp/
 
 # AR marker placeholder
 frontend/public/qr-marker-placeholder.txt
+frontend/.env
+frontend/.env.local

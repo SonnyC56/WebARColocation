@@ -10,9 +10,7 @@
     "generate-qr": "node generate-qr-marker.js"
   },
   "dependencies": {
-    "@babylonjs/core": "^8.34.1",
-    "@babylonjs/gui": "^8.34.1",
-    "@babylonjs/loaders": "^8.34.1",
+    "@snap/camera-kit": "^1.11.0",
     "pinia": "^3.0.3",
     "qrcode": "^1.5.4",
     "vue": "^3.5.22",

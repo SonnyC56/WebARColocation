@@ -20,6 +20,10 @@ export default defineConfig({
     host: true, // Allow external connections
   },
   build: {
-    target: 'esnext', // For WebXR support
+    target: 'esnext',
   },
+  // Camera Kit requires specific CSP settings
+  // Note: You'll also need to configure CSP headers in your deployment (Vercel)
+  // connect-src: https://*.snapar.com
+  // script-src: https://cf-st.sc-cdn.net/ blob: 'wasm-unsafe-eval'
 })
