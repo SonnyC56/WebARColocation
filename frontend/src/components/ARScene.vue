@@ -11,6 +11,7 @@ import { useCameraKit } from '../composables/useCameraKit';
 const props = defineProps<{
   lensId?: string;
   lensGroupId?: string;
+  cameraType?: 'user' | 'environment';
 }>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -41,8 +42,8 @@ onMounted(async () => {
       return;
     }
 
-    // Set camera source
-    const sourceSet = await setCameraSource(newSession);
+    // Set camera source with specified camera type
+    const sourceSet = await setCameraSource(newSession, props.cameraType || 'environment');
     if (!sourceSet) {
       console.error('Failed to set camera source');
       return;

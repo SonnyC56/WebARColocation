@@ -11,7 +11,7 @@ const router = createRouter({
       component: HomePage
     },
     {
-      path: '/lens/:lensGroupId/:lensId',
+      path: '/lens/:lensGroupId/:lensId/:cameraType',
       name: 'lens',
       component: LensPage
     }

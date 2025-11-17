@@ -73,20 +73,24 @@ export function useCameraKit() {
   };
 
   // Set camera source
-  const setCameraSource = async (session: CameraKitSession): Promise<boolean> => {
+  const setCameraSource = async (
+    session: CameraKitSession,
+    cameraType: 'user' | 'environment' = 'environment'
+  ): Promise<boolean> => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Back camera for AR
-        } 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: cameraType === 'user' ? 'user' : 'environment',
+        }
       });
-      
+
       const source = createMediaStreamSource(stream, {
-        cameraType: 'environment', // Back camera for world AR
+        transform: cameraType === 'user' ? Transform2D.MirrorX : undefined,
+        cameraType: cameraType,
       });
 
       await session.setSource(source);
-      console.log('Camera source set successfully');
+      console.log(`Camera source set successfully: ${cameraType}`);
       return true;
     } catch (error) {
       console.error('Failed to set camera source:', error);
