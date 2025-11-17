@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@snap/camera-kit": "^1.11.0",
-    "pinia": "^3.0.3",
     "qrcode": "^1.5.4",
     "vue": "^3.5.22",
     "ws": "^8.18.3"

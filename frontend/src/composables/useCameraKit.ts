@@ -144,10 +144,27 @@ export function useCameraKit() {
   const removeLens = async (session: CameraKitSession): Promise<void> => {
     try {
       await session.removeLens();
-      isActive.value = false;
       console.log('Lens removed');
     } catch (error) {
       console.error('Failed to remove Lens:', error);
+    }
+  };
+
+  // Change Lens (removes current and applies new one)
+  const changeLens = async (
+    session: CameraKitSession,
+    lensId: string,
+    lensGroupId: string
+  ): Promise<boolean> => {
+    try {
+      // Remove current lens first
+      await removeLens(session);
+
+      // Load and apply new lens
+      return await loadAndApplyLens(session, lensId, lensGroupId);
+    } catch (error) {
+      console.error('Failed to change Lens:', error);
+      return false;
     }
   };
 
@@ -178,6 +195,7 @@ export function useCameraKit() {
     createSession,
     setCameraSource,
     loadAndApplyLens,
+    changeLens,
     play,
     pause,
     removeLens,

@@ -1,0 +1,43 @@
+studioVersion:
+  major: 5
+  minor: 16
+  patch: 0
+  build: 25111305
+  type: Public
+coreVersion: 336
+clientVersion: 13.66
+updateCheckpoint: 81
+sceneId: 0a1ccb1a-fe88-4fbb-9883-e3af3c75fd99
+metaInfo:
+  hints:
+    []
+  tags:
+    []
+  lensName: Xmas Card Demo
+  lensDescriptors:
+    []
+  lensApplicability:
+    - Front
+    - Back
+  lensClientCompatibilities:
+    - CameraKit
+  platformBundlesEnabled: false
+  iconHash: 7153a75002b626483949ed1d5a029184
+  videoPreviewHash: ""
+  fromTemplateName: Default
+  fromTemplateUrl: Lens Studio 5.16.0.25111305
+  activationCamera: Front
+  sourceMapEnabled: false
+  usingMinClientVersions: false
+  androidMinClientVersion:
+    major: 0
+    minor: 0
+    patch: 0
+    build: 0
+  iOSMinClientVersion:
+    major: 0
+    minor: 0
+    patch: 0
+    build: 0
+  documentId: f3d524c5-ac07-44a7-b03a-e07d591396ec
+  originalDocumentId: f3d524c5-ac07-44a7-b03a-e07d591396ec
