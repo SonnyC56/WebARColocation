@@ -82,7 +82,6 @@ export function useCameraKit() {
       });
       
       const source = createMediaStreamSource(stream, {
-        transform: Transform2D.MirrorX, // Mirror for natural feel
         cameraType: 'environment', // Back camera for world AR
       });
 
