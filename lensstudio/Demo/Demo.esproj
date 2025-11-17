@@ -20,6 +20,8 @@ metaInfo:
     - Front
     - Back
   lensClientCompatibilities:
+    - Mobile
+    - Web
     - CameraKit
   platformBundlesEnabled: false
   iconHash: 7153a75002b626483949ed1d5a029184
