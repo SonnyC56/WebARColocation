@@ -97,13 +97,22 @@ const lenses = ref<Lens[]>([
     cameraType: 'environment'
   },
   {
-    id: 'Xmas-card NO CARD',
-    name: 'Xmas Card',
+    id: 'Xmas-no-card',
+    name: 'Xmas NO CARD',
     description: 'Try out the demo lens',
     lensId: '5013c246-dece-4d62-9842-c000686e49cb',
     lensGroupId: 'e22096cf-8353-4f1c-8160-e6fe155b7b49',
     cameraType: 'environment'
+  },
+  {
+    id: 'xmas-card-no-snow-demo',
+    name: 'Xmas Card no Snow',
+    description: 'Try out the dog lens',
+    lensId: '668d9fa2-ec06-47c2-8630-762bfac6cdcb',
+    lensGroupId: 'e22096cf-8353-4f1c-8160-e6fe155b7b49',
+    cameraType: 'environment'
   }
+
 
 ]);
 </script>
