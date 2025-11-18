@@ -95,7 +95,16 @@ const lenses = ref<Lens[]>([
     lensId: 'a4bd2e0d-d5be-42b9-9b75-0c6764141c7a',
     lensGroupId: 'e22096cf-8353-4f1c-8160-e6fe155b7b49',
     cameraType: 'environment'
+  },
+  {
+    id: 'Xmas-card NO CARD',
+    name: 'Xmas Card',
+    description: 'Try out the demo lens',
+    lensId: '5013c246-dece-4d62-9842-c000686e49cb',
+    lensGroupId: 'e22096cf-8353-4f1c-8160-e6fe155b7b49',
+    cameraType: 'environment'
   }
+
 ]);
 </script>
 

@@ -33,7 +33,6 @@
     - !<own> 25cc5cce-dec5-4b32-9e87-8b619c3f8772
     - !<own> 57c6fb02-3004-40b0-a324-072609809fe3
     - !<own> 5d70d9c1-8f99-4555-abff-89074880f5d3
-    - !<own> 4887e848-5050-4176-bcd6-ed77e333ec21
     - !<own> 00000000-0000-0065-0000-000000000064
     - !<own> 0005641c-028d-459a-0000-000000014b4d
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
@@ -413,21 +412,6 @@
   RotationAngle: 0
   Pivot: {x: 0.000000, y: 0.000000}
   ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000
-- !<SceneObject/14bca124-6ca8-4dda-afa2-c626ec15e6f6>
-  PrefabRemaps:
-    []
-  Name: Snow
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> fac59cf8-8c0b-4e3d-b0c1-6a8e9d2e5900
 - !<Image/159c58ff-0977-4cc4-998f-ee520d9c2bd4>
   PrefabRemaps:
     []
@@ -1127,25 +1111,6 @@
   RotationAngle: 0
   Pivot: {x: 0.000000, y: 0.000000}
   ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000
-- !<SceneObject/4887e848-5050-4176-bcd6-ed77e333ec21>
-  PrefabRemaps:
-    - 14bca124-6ca8-4dda-afa2-c626ec15e6f6: cae6e7b9-24ab-413c-547d-f0a410829157
-    - 2d9dd4f9-3938-4167-b0be-9664d63bd969: 5af77d84-76a5-4076-4db6-192ab2194b61
-    - 4887e848-5050-4176-bcd6-ed77e333ec21: 9ad5295d-2d96-40e6-7b5a-36d2f7f2ed19
-    - bbfa4bde-0df2-4794-a7eb-1c3fb46f5155: e9b8defe-cd98-4cdd-58d3-425663631ea9
-    - fac59cf8-8c0b-4e3d-b0c1-6a8e9d2e5900: 4c1e3ceb-20f9-49a6-6ee1-c2f9ac64881f
-  Name: SnowVFX
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    - !<own> 14bca124-6ca8-4dda-afa2-c626ec15e6f6
-  Components:
-    []
 - !<LookAtComponent/4b307d70-98bb-4036-9b3c-dbee74036584>
   PrefabRemaps:
     []
@@ -2534,19 +2499,6 @@
   RotationAngle: 0
   Pivot: {x: 0.000000, y: 0.000000}
   ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000
-- !<VFXComponent/fac59cf8-8c0b-4e3d-b0c1-6a8e9d2e5900>
-  PrefabRemaps:
-    []
-  Name: VFX Component
-  Enabled: true
-  RenderOrder: 0
-  StretchMode: Stretch
-  VerticalAlignment: Center
-  HorizontalAlignment: Center
-  MeshShadowMode: None
-  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
-  ShadowDensity: 1.000000
-  VFXAsset: !<reference> 5587752d-68cd-4695-b1a2-d30d7592a8c1
 - !<SceneObject/fc5752b8-990f-4730-9c37-9692c8142b23>
   PrefabRemaps:
     []

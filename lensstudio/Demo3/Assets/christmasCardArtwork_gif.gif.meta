@@ -1,0 +1,27 @@
+- !<AssetImportMetadata/2d15fa20-e435-4dec-91f6-53f89def5901>
+  ImportedAssetIds:
+    AnimatedTexture: !<reference> 578736d6-0452-4fb6-9736-778dbdc1429a
+  ImporterName: GifImporter
+  PrimaryAsset: !<reference> 578736d6-0452-4fb6-9736-778dbdc1429a
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    AnimatedTexture: !<own> ae9ee774-1e99-42e1-8388-1f00f38140cf
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<AnimatedTextureData/ae9ee774-1e99-42e1-8388-1f00f38140cf>
+  AutoPlay: true
+  Reversed: false
+  PingPong: false
+  CurrentSequence: ""
+  KeyFramesData:
+    default:
+      - time: 0.000000
+        value: 0
+      - time: 0.800000
+        value: 4
